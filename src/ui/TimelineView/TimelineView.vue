@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { buildAxisRulerTicks } from '../../domain/axisRuler';
-import {
-  formatCursorTime,
-  formatTime,
-  resolveCursorTimeUnit,
-} from '../../domain/formatTime';
+import { formatCursorTime, formatTime } from '../../domain/formatTime';
 import {
   DEFAULT_DEPENDENCY_DEPTH,
   type DependencyMode,
@@ -13,7 +9,8 @@ import {
   type SwimEvent,
   type SwimlaneModel,
   type SwimlaneViewState,
-  type TimeDisplayUnit,
+  type TimeDisplayMode,
+  type TimeScaleUnit,
 } from '../../domain/types';
 import { GUTTER_WIDTH_DEFAULT } from '../panelResize';
 import { normalizeMeasureRange } from '../../domain/viewState';
@@ -40,7 +37,9 @@ const props = withDefaults(
   defineProps<{
     bounds: { minTime: number; maxTime: number };
     view: SwimlaneViewState;
-    unit: TimeDisplayUnit;
+    timeDisplayMode: TimeDisplayMode;
+    timeScaleUnit: TimeScaleUnit;
+    clockFreqMHz?: number;
     dependencyMode?: DependencyMode;
     dependencyDepth?: number;
     groups: GutterGroup[];
@@ -108,16 +107,22 @@ function onGutterWidth(w: number) {
   emit('update:gutterWidth', w);
 }
 
-const cursorTimeUnit = computed(() =>
-  resolveCursorTimeUnit(props.bounds.maxTime - props.bounds.minTime, props.unit),
-);
+const cursorLabel = computed(() => {
+  if (!props.cursor) return '';
+  return formatCursorTime(props.cursor.time - props.bounds.minTime, props.timeDisplayMode, {
+    unit: props.timeScaleUnit,
+    clockFreqMHz: props.clockFreqMHz,
+  });
+});
 
 const viewportRuler = computed(() =>
   buildAxisRulerTicks({
     rangeStart: props.view.startTime,
     rangeEnd: props.view.endTime,
     origin: props.bounds.minTime,
-    timeUnit: props.unit,
+    timeDisplayMode: props.timeDisplayMode,
+    timeScaleUnit: props.timeScaleUnit,
+    clockFreqMHz: props.clockFreqMHz,
     widthPx: timeAxisWidth.value,
   }),
 );
@@ -132,7 +137,10 @@ const measureAxis = computed(() => {
   const start = Math.min(range.startTime, range.endTime);
   const end = Math.max(range.startTime, range.endTime);
   if (!(end > start)) return null;
-  const label = formatTime(end - start, props.unit);
+  const label = formatTime(end - start, props.timeDisplayMode, {
+    unit: props.timeScaleUnit,
+    clockFreqMHz: props.clockFreqMHz,
+  });
   const visStart = Math.max(viewStart, start);
   const visEnd = Math.min(viewEnd, end);
   if (!(visEnd > visStart)) {
@@ -221,8 +229,8 @@ const cursorLabelAbove = computed(() => {
   const cursor = props.cursor;
   const axisW = timeAxisWidth.value;
   if (!axis || !layout || !cursor || axisW <= 0) return false;
-  const cursorLabel = formatCursorTime(cursor.time - props.bounds.minTime, cursorTimeUnit.value);
-  const cursorLabelW = estimateAxisLabelWidth(cursorLabel, CURSOR_LABEL_MIN_WIDTH_PX);
+  const cursorLabelText = cursorLabel.value;
+  const cursorLabelW = estimateAxisLabelWidth(cursorLabelText, CURSOR_LABEL_MIN_WIDTH_PX);
   const dtLabelW = measureLabelWidth.value || estimateAxisLabelWidth(axis.label);
   const dtPlacement =
     layout.mode === 'inline'
@@ -504,7 +512,8 @@ defineExpose({
         :max-time="bounds.maxTime"
         :start-time="view.startTime"
         :end-time="view.endTime"
-        :time-unit="unit"
+        :time-display-mode="timeDisplayMode"
+        :clock-freq-m-hz="clockFreqMHz"
         @update:window="emit('update:window', $event)"
       />
     </div>
@@ -533,7 +542,7 @@ defineExpose({
         <CursorTimestamp
           v-if="cursor"
           :x-ratio="cursor.xRatio"
-          :label="formatCursorTime(cursor.time - bounds.minTime, cursorTimeUnit)"
+          :label="cursorLabel"
           :label-above="cursorLabelAbove"
         />
         <template v-if="measureAxis">
@@ -661,7 +670,9 @@ defineExpose({
       :search-query="view.searchQuery"
       :measure-mode="view.measureMode"
       :measure-range="view.measureRange"
-      :time-unit="unit"
+      :time-display-mode="timeDisplayMode"
+      :time-scale-unit="timeScaleUnit"
+      :clock-freq-m-hz="clockFreqMHz"
       :dependency-mode="dependencyMode"
       :dependency-depth="dependencyDepth"
       :prefer-renderer="preferRenderer ?? 'auto'"

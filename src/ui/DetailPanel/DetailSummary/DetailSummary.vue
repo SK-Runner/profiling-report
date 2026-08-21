@@ -2,11 +2,13 @@
 import { computed } from 'vue';
 import { formatTimeParts } from '../../../domain/formatTime';
 import { t } from '../../../i18n';
-import type { SelectedEvent, TimeDisplayUnit } from '../../../domain/types';
+import type { SelectedEvent, TimeDisplayMode, TimeScaleUnit } from '../../../domain/types';
 
 const props = defineProps<{
   selected: SelectedEvent;
-  unit: TimeDisplayUnit;
+  timeDisplayMode: TimeDisplayMode;
+  timeScaleUnit: TimeScaleUnit;
+  clockFreqMHz?: number;
   locale?: string;
 }>();
 
@@ -32,7 +34,10 @@ const metrics = computed(() => {
     ['end', props.selected.endTime],
   ];
   return rows.map(([key, ns]) => {
-    const parts = formatTimeParts(ns, props.unit);
+    const parts = formatTimeParts(ns, props.timeDisplayMode, {
+      unit: props.timeScaleUnit,
+      clockFreqMHz: props.clockFreqMHz,
+    });
     return {
       key,
       value: parts.value,

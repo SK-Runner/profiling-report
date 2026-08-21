@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { t } from '../../i18n';
 import type { DependencyNeighbors } from '../../domain/dependencies';
-import type { DependencyMode, SelectedEvent, TimeDisplayUnit } from '../../domain/types';
+import type { DependencyMode, SelectedEvent, TimeDisplayMode, TimeScaleUnit } from '../../domain/types';
 import {
   DOCK_HEIGHT_DEFAULT,
   DOCK_HEIGHT_MAX,
@@ -16,7 +16,9 @@ import DetailRelevant from './DetailRelevant/DetailRelevant.vue';
 const props = withDefaults(
   defineProps<{
     selected: SelectedEvent;
-    unit: TimeDisplayUnit;
+    timeDisplayMode: TimeDisplayMode;
+    timeScaleUnit: TimeScaleUnit;
+    clockFreqMHz?: number;
     locale?: string;
     /** Omitted when the report carries no dependency data — the column hides. */
     neighbors?: DependencyNeighbors;
@@ -104,7 +106,9 @@ function onResizePointerUp() {
     >
       <DetailSummary
         :selected="selected"
-        :unit="unit"
+        :time-display-mode="timeDisplayMode"
+        :time-scale-unit="timeScaleUnit"
+        :clock-freq-m-hz="clockFreqMHz"
         :locale="locale"
       />
       <DetailParameter

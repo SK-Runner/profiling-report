@@ -35,7 +35,7 @@ describe('SwimlaneCanvas', () => {
         model: { processes: [], minTime: 0, maxTime: 1000 },
         measureMode: true,
         measureRange: null,
-        timeUnit: 'ms',
+        timeDisplayMode: 'time', timeScaleUnit: 'ms',
       },
       attachTo: document.body,
     });
@@ -74,7 +74,7 @@ describe('SwimlaneCanvas', () => {
         ...nullProps,
         measureMode: true,
         measureRange: { startTime: 200, endTime: 500 },
-        timeUnit: 'ms',
+        timeDisplayMode: 'time', timeScaleUnit: 'ms',
       },
     });
     expect(wrapper.find('[data-testid="measure-fade-left"]').exists()).toBe(true);
@@ -145,7 +145,7 @@ describe('SwimlaneCanvas', () => {
         model: { processes: [], minTime: 0, maxTime: 1000 },
         measureMode: true,
         measureRange: null,
-        timeUnit: 'ms',
+        timeDisplayMode: 'time', timeScaleUnit: 'ms',
       },
       attachTo: document.body,
     });
@@ -180,7 +180,7 @@ describe('SwimlaneCanvas', () => {
         model: { processes: [], minTime: 0, maxTime: 1000 },
         measureMode: true,
         measureRange: null,
-        timeUnit: 'ms',
+        timeDisplayMode: 'time', timeScaleUnit: 'ms',
       },
       attachTo: document.body,
     });

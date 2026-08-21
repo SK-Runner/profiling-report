@@ -1,25 +1,35 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { TimeDisplayUnit } from '../../domain/types';
-import { MAX_DEPENDENCY_DEPTH, normalizeDependencyDepth } from '../../domain/types';
+import type { TimeDisplayMode, DependencyMode } from '../../domain/types';
+import { DEFAULT_DEPENDENCY_DEPTH, MAX_DEPENDENCY_DEPTH, normalizeDependencyDepth } from '../../domain/types';
 import { t } from '../../i18n';
 
-defineProps<{
-  searchQuery: string;
-  asideVisible: boolean;
-  asideAvailable: boolean;
-  zoomPercent: number;
-  timeUnit: TimeDisplayUnit;
-  dependencyDepth: number;
-  locale?: string;
-  title?: string;
-  measureMode?: boolean;
-}>();
+withDefaults(
+  defineProps<{
+    searchQuery: string;
+    asideVisible: boolean;
+    asideAvailable: boolean;
+    zoomPercent: number;
+    timeDisplayMode: TimeDisplayMode;
+    /** When set, CPU clocks option is shown. */
+    clockFreqMHz?: number;
+    dependencyMode?: DependencyMode;
+    dependencyDepth?: number;
+    locale?: string;
+    title?: string;
+    measureMode?: boolean;
+  }>(),
+  {
+    dependencyMode: 'all',
+    dependencyDepth: DEFAULT_DEPENDENCY_DEPTH,
+  },
+);
 
 const emit = defineEmits<{
   'update:searchQuery': [value: string];
   'update:asideVisible': [value: boolean];
-  'update:timeUnit': [value: TimeDisplayUnit];
+  'update:timeDisplayMode': [value: TimeDisplayMode];
+  'update:dependencyMode': [value: DependencyMode];
   'update:dependencyDepth': [value: number];
   'update:measureMode': [value: boolean];
   'zoom-to-fit': [];
@@ -27,13 +37,6 @@ const emit = defineEmits<{
   'zoom-out': [];
   'update:zoomPercent': [value: number];
 }>();
-
-function onDepthChange(event: Event) {
-  // A cleared number input reads as '' — normalizeDependencyDepth turns that (and
-  // anything unparsable) into the shared default rather than letting NaN through.
-  const raw = (event.target as HTMLInputElement).value.trim();
-  emit('update:dependencyDepth', normalizeDependencyDepth(raw === '' ? Number.NaN : Number(raw)));
-}
 
 const displayControlOpen = ref(false);
 
@@ -43,6 +46,11 @@ function toggleDisplayControl() {
 
 function closeDisplayControl() {
   displayControlOpen.value = false;
+}
+
+function onDependencyDepth(e: Event) {
+  const n = Number.parseInt((e.target as HTMLInputElement).value, 10);
+  emit('update:dependencyDepth', normalizeDependencyDepth(n));
 }
 </script>
 
@@ -249,66 +257,7 @@ function closeDisplayControl() {
         </svg>
       </button>
 
-      <button
-        type="button"
-        class="pr-toolbar__icon-btn"
-        data-testid="toggle-measure"
-        :aria-pressed="measureMode"
-        :aria-label="t('measure', locale)"
-        :class="{ 'pr-toolbar__icon-btn--on': measureMode }"
-        :title="t('measure', locale)"
-        @click="emit('update:measureMode', !measureMode)"
-      >
-        <svg
-          viewBox="0 0 16 16"
-          width="14"
-          height="14"
-          aria-hidden="true"
-          data-testid="measure-icon"
-        >
-          <!-- Vertical bars (selection edges) -->
-          <path
-            d="M3 3v10"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-          />
-          <path
-            d="M13 3v10"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-          />
-          <!-- Shaft + open stroke chevrons; ~1px gap from bars -->
-          <path
-            d="M6 8h4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="butt"
-          />
-          <path
-            data-testid="measure-icon-head"
-            d="M6.2 5.6 L4 8 L6.2 10.4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="butt"
-            stroke-linejoin="miter"
-          />
-          <path
-            data-testid="measure-icon-head"
-            d="M9.8 5.6 L12 8 L9.8 10.4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="butt"
-            stroke-linejoin="miter"
-          />
-        </svg>
-      </button>
+      <!-- Measure toggle temporarily hidden; prop/emit kept for easy restore. -->
 
       <div class="pr-toolbar__display-wrap">
         <button
@@ -373,32 +322,42 @@ function closeDisplayControl() {
           <label class="pr-toolbar__display-field">
             <span class="pr-toolbar__display-label">{{ t('taskDisplayUnit', locale) }}</span>
             <select
-              data-testid="time-unit"
-              :value="timeUnit"
-              @change="emit('update:timeUnit', ($event.target as HTMLSelectElement).value as TimeDisplayUnit)"
+              data-testid="time-display-mode"
+              :value="timeDisplayMode"
+              @change="emit('update:timeDisplayMode', ($event.target as HTMLSelectElement).value as TimeDisplayMode)"
             >
-              <option value="ms">ms</option>
-              <option value="us">µs</option>
-              <option value="ns">ns</option>
+              <option value="time">{{ t('displayModeTime', locale) }}</option>
+              <option
+                v-if="clockFreqMHz != null"
+                value="cycles"
+              >
+                {{ t('displayModeCycles', locale) }}
+              </option>
             </select>
           </label>
           <label class="pr-toolbar__display-field">
-            <span class="pr-toolbar__display-label">
-              {{ t('connectionLevel', locale) }}
-              <span
-                class="pr-toolbar__display-help"
-                :title="t('connectionLevelHelp', locale)"
-                aria-hidden="true"
-              >?</span>
-            </span>
+            <span class="pr-toolbar__display-label">{{ t('dependencyDisplay', locale) }}</span>
+            <select
+              data-testid="dependency-mode"
+              :value="dependencyMode"
+              @change="emit('update:dependencyMode', ($event.target as HTMLSelectElement).value as DependencyMode)"
+            >
+              <option value="all">{{ t('depModeAll', locale) }}</option>
+              <option value="predecessors">{{ t('depModePredecessors', locale) }}</option>
+              <option value="successors">{{ t('depModeSuccessors', locale) }}</option>
+            </select>
+          </label>
+          <label class="pr-toolbar__display-field">
+            <span class="pr-toolbar__display-label">{{ t('dependencyDepth', locale) }}</span>
             <input
               data-testid="dependency-depth"
               type="number"
-              step="1"
               min="-1"
               :max="MAX_DEPENDENCY_DEPTH"
+              step="1"
               :value="dependencyDepth"
-              @change="onDepthChange"
+              :title="t('dependencyDepthHint', locale)"
+              @change="onDependencyDepth"
             >
           </label>
         </div>
@@ -650,6 +609,10 @@ function closeDisplayControl() {
   color: #2d70e3;
 }
 
+.pr-toolbar__caliper {
+  display: block;
+}
+
 .pr-toolbar__display-wrap {
   position: relative;
   display: inline-flex;
@@ -715,20 +678,6 @@ function closeDisplayControl() {
   font-size: 12px;
   color: #b2b2b2;
   line-height: 1.2;
-}
-
-.pr-toolbar__display-help {
-  display: inline-grid;
-  place-items: center;
-  width: 14px;
-  height: 14px;
-  margin-left: 4px;
-  border: 1px solid #6a6a6a;
-  border-radius: 50%;
-  color: #a0a0a0;
-  font-size: 11px;
-  cursor: help;
-  vertical-align: -2px;
 }
 
 .pr-toolbar__display-field select,

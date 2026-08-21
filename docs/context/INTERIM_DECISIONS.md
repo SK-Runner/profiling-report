@@ -35,8 +35,21 @@ Canonical Product answers stay in [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md). Packag
 | **I-Q11f** | Roofline tabs | **Hide** 内存单元 / 通路 / 搬运 until Q11 defines distinct series | Single chart chrome | Product tab semantics |
 | **I-Q9** | Dependency encoding | Chrome Trace `args` convention: `args.event_id` makes an X event addressable (else the adapter's own `e-<seq>` id stands) and `args.dependencies` lists **successor** ids. Predecessors come from a reverse index, never from the producer. Ids that no event carries are dropped. `dependencies` capability + every dependency surface hide when the model has no edges | `buildDependencyGraph` / `neighborsOf` (`PR-DEPGRAPH-*`), `DetailRelevant` (`PR-DREL-*`), playground `deps` fixture | Product defines the real producer encoding (Q9) |
 | **I-Q7a** | Hardware details panel | **Source confirmed:** `HardwareInfo.jsonl` category sections. Fallback: flat **OpBasicInfo** non-empty columns when jsonl absent. Never invent cores/HBM/peaks. Omit model when both absent | `HardwareDetailsPanel`, adapter tests | Product maps 核数 / NPU ARCH onto the meta row |
-| **I-Q14** | Time units | Configurable display: **ms / µs / ns** only. Default **ms**. **No** clock-cycle mode in MVP | Formatter + host/locale pref prop | Product specifies cycle mode + frequency source |
+| **I-Q14** | Time display | **Time (auto)** vs **CPU clocks**. Time mode auto-scales s/ms/µs/ns (viewport from visible span; overview from total span×width). Clocks: `cycles = ns × freqMHz / 1000` with `freqMHz = currentFreq ?? ratedFreq` from `OpBasicInfo` (MHz); prefer **Current Freq** over Rated when they differ. Hide clocks option when freq missing; fall back to time if freq disappears while in cycles. **Not** per-event `*_total_cycles`; display conversion only (see note below) | Formatter + toolbar mode + host `timeDisplayMode` prop | Product may refine freq source / labels |
 | **I-Q16–19** | Packaging / UX chrome | Follow [PACKAGING_SUGGESTIONS.md](PACKAGING_SUGGESTIONS.md) as if accepted for scaffold | Repo-root `src/`, Ant Design + custom swimlane CSS, zh-CN default + EN keys, wheel/slider MVP gestures | Product confirm/change each Q16–Q19 |
+
+### I-Q14 — CPU clocks from OpBasicInfo freq
+
+**Formula.** `cycles = ns × freqMHz / 1000`, where `freqMHz` is `SummaryMetrics.currentFreq` if set, else `ratedFreq` (both from `OpBasicInfo.csv` `Current Freq` / `Rated Freq`). Values are treated as **MHz** (AI Core clock; matches aside **aic频率**).
+
+**Why Current Freq.** Prefer current over rated when they differ (DVFS / measured operating clock). On [`data/out.rep`](../../data/out.rep), `PipeUtilization` `aiv_total_cycles / aiv_time(us)` equals OpBasicInfo `Current Freq` (1650) per block — display conversion matches measured block cycles for that pack.
+
+**Caveats (interim).**
+
+- Cycles mode is **derived** from timeline ns and freq, not a pass-through of `aic_total_cycles` / `aiv_total_cycles` per swimlane event.
+- Assumes swimlane timestamps share the same AIC clock domain as OpBasicInfo freq; markers on other clocks would be mislabeled.
+- Do **not** use `HardwareInfo.jsonl` `ai_core_frequency_MHZ` for this conversion (sample values can disagree with OpBasicInfo; e.g. doc example `[100,100]` vs `1650` on `out.rep`).
+- When freq is missing or invalid, hide the clocks option and show `—` in cycles formatters (no invented freq).
 
 ---
 
@@ -58,7 +71,6 @@ Not required for first MVP merge:
 - Full report stats tiles (compute / avg util) — I/O BW shipped under I-Q6g
 - Overview charts with real series
 - Product-final hardware inventory beyond I-Q7a; roofline tabs / L2 series beyond I-Q11*; memory SVG; deps; secondary tabs
-- Clock-cycle display mode
 
 ---
 

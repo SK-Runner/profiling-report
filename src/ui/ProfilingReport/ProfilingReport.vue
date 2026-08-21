@@ -26,9 +26,13 @@ import {
   type SwimlaneModel,
   type SwimlaneViewState,
   type SwimThread,
-  type TimeDisplayUnit,
+  type TimeDisplayMode,
   type ViewFullCsvPayload,
 } from '../../domain/types';
+import {
+  resolveClockFreqMHz,
+  resolveTimeUnitFromVisibleRange,
+} from '../../domain/formatTime';
 import { hasDependencies, neighborsOf } from '../../domain/dependencies';
 import { colorVarForLaneName } from '../../domain/laneColors';
 import {
@@ -58,7 +62,7 @@ const props = withDefaults(defineProps<{
   reportModel?: ReportViewModel;
   theme?: 'light' | 'dark';
   locale?: string;
-  timeUnit?: TimeDisplayUnit;
+  timeDisplayMode?: TimeDisplayMode;
   dependencyMode?: DependencyMode;
   dependencyDepth?: number;
   /** Force swimlane backend for perf A/B (`auto` prefers WebGL2). */
@@ -91,7 +95,7 @@ const selected = ref<SelectedEvent | null>(null);
 /** Raw model event behind `selected` — the dependency walk needs its EventRefs. */
 const selectedEvent = ref<SwimEvent | null>(null);
 const tooltipStyle = ref({ left: '0px', top: '0px' });
-const localTimeUnit = ref<TimeDisplayUnit>(props.timeUnit ?? 'ms');
+const localTimeDisplayMode = ref<TimeDisplayMode>(props.timeDisplayMode ?? 'time');
 const localDependencyMode = ref<DependencyMode>(props.dependencyMode);
 const localDependencyDepth = ref(normalizeDependencyDepth(props.dependencyDepth));
 const cursor = ref<{ time: number; xRatio: number } | null>(null);
@@ -105,6 +109,10 @@ const collapsedGroupIds = ref<string[]>([]);
 
 const swim = computed(() => props.swimlaneModel ?? internalSwim.value);
 const report = computed(() => props.reportModel ?? internalReport.value);
+const clockFreqMHz = computed(() => resolveClockFreqMHz(report.value?.summary));
+const viewportTimeScaleUnit = computed(() =>
+  resolveTimeUnitFromVisibleRange(viewState.value.endTime - viewState.value.startTime),
+);
 /** Host-managed mode has no adapter to ask, so adapter flags must not survive the switch. */
 const hostManaged = computed(() => props.swimlaneModel != null || props.reportModel != null);
 /** Host prop wins; otherwise the ones the adapter derived from the loaded source. */
@@ -113,7 +121,6 @@ const caps = computed<ReportCapability[]>(() => {
   if (hostManaged.value) return [];
   return internalCapabilities.value ?? [];
 });
-const unit = computed<TimeDisplayUnit>(() => localTimeUnit.value);
 
 const showOverview = computed(() => (report.value?.overviewSeries?.length ?? 0) > 0);
 /** Toolbar toggle + initial asideVisible share this gate (includes CSV-only reports). */
@@ -323,11 +330,17 @@ function onMeasureKeydown(e: KeyboardEvent) {
 }
 
 watch(
-  () => props.timeUnit,
-  (u) => {
-    if (u) localTimeUnit.value = u;
+  () => props.timeDisplayMode,
+  (m) => {
+    if (m) localTimeDisplayMode.value = m;
   },
 );
+
+watch(clockFreqMHz, (freq) => {
+  if (freq == null && localTimeDisplayMode.value === 'cycles') {
+    localTimeDisplayMode.value = 'time';
+  }
+});
 
 watch(
   () => props.dependencyMode,
@@ -464,8 +477,8 @@ function onMeasureRange(range: MeasureRange | null) {
   viewState.value = setMeasureRange(viewState.value, range);
 }
 
-function onTimeUnit(u: TimeDisplayUnit) {
-  localTimeUnit.value = u;
+function onTimeDisplayMode(mode: TimeDisplayMode) {
+  localTimeDisplayMode.value = mode;
 }
 
 function onDependencyMode(mode: DependencyMode) {
@@ -517,14 +530,15 @@ defineExpose({ selectEventById, viewState });
       :aside-visible="viewState.asideVisible"
       :aside-available="asideAvailable"
       :zoom-percent="zoomPercent"
-      :time-unit="unit"
+      :time-display-mode="localTimeDisplayMode"
+      :clock-freq-m-hz="clockFreqMHz"
       :dependency-mode="localDependencyMode"
       :dependency-depth="localDependencyDepth"
       :locale="locale"
       :measure-mode="viewState.measureMode"
       @update:search-query="onSearch"
       @update:aside-visible="onAside"
-      @update:time-unit="onTimeUnit"
+      @update:time-display-mode="onTimeDisplayMode"
       @update:dependency-mode="onDependencyMode"
       @update:dependency-depth="onDependencyDepth"
       @update:zoom-percent="onZoomPercent"
@@ -563,13 +577,16 @@ defineExpose({ selectEventById, viewState });
           :aside-visible="viewState.asideVisible"
           :aside-available="asideAvailable"
           :zoom-percent="zoomPercent"
-          :time-unit="unit"
+          :time-display-mode="localTimeDisplayMode"
+          :clock-freq-m-hz="clockFreqMHz"
+          :dependency-mode="localDependencyMode"
           :dependency-depth="localDependencyDepth"
           :locale="locale"
           :measure-mode="viewState.measureMode"
           @update:search-query="onSearch"
           @update:aside-visible="onAside"
-          @update:time-unit="onTimeUnit"
+          @update:time-display-mode="onTimeDisplayMode"
+          @update:dependency-mode="onDependencyMode"
           @update:dependency-depth="onDependencyDepth"
           @update:zoom-percent="onZoomPercent"
           @update:measure-mode="onMeasureMode"
@@ -581,7 +598,9 @@ defineExpose({ selectEventById, viewState });
           ref="timelineRef"
           :bounds="bounds"
           :view="viewState"
-          :unit="unit"
+          :time-display-mode="localTimeDisplayMode"
+          :time-scale-unit="viewportTimeScaleUnit"
+          :clock-freq-m-hz="clockFreqMHz"
           :dependency-mode="localDependencyMode"
           :dependency-depth="localDependencyDepth"
           :groups="laneGroups"
@@ -622,7 +641,9 @@ defineExpose({ selectEventById, viewState });
     <DetailPanel
       v-if="selected && showTimeline"
       :selected="selected"
-      :unit="unit"
+      :time-display-mode="localTimeDisplayMode"
+      :time-scale-unit="viewportTimeScaleUnit"
+      :clock-freq-m-hz="clockFreqMHz"
       :locale="locale"
       :neighbors="dependencyNeighbors"
       :dependency-mode="localDependencyMode"
@@ -636,7 +657,9 @@ defineExpose({ selectEventById, viewState });
       v-if="hovered && showTimeline"
       :event="hovered"
       :style-pos="tooltipStyle"
-      :unit="unit"
+      :time-display-mode="localTimeDisplayMode"
+      :time-scale-unit="viewportTimeScaleUnit"
+      :clock-freq-m-hz="clockFreqMHz"
       :locale="locale"
     />
   </div>

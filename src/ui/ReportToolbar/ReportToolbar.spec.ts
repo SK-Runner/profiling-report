@@ -8,8 +8,7 @@ describe('ReportToolbar', () => {
     asideVisible: false,
     asideAvailable: true,
     zoomPercent: 100,
-    timeUnit: 'ms',
-    dependencyDepth: 1,
+    timeDisplayMode: 'time',
   } as const;
 
   it('PR-TOOLBAR-001: emits update:searchQuery on text input', async () => {
@@ -37,18 +36,27 @@ describe('ReportToolbar', () => {
     expect(wrapper.emitted('zoom-to-fit')).toBeTruthy();
   });
 
-  it('PR-TOOLBAR-005: layers opens display control; unit select emits update:timeUnit', async () => {
-    const wrapper = mount(ReportToolbar, { props: defaultProps });
-    expect(wrapper.find('[data-testid="time-unit"]').exists()).toBe(false);
+  it('PR-TOOLBAR-005: layers opens display control; mode select emits update:timeDisplayMode', async () => {
+    const wrapper = mount(ReportToolbar, { props: { ...defaultProps, clockFreqMHz: 1800 } });
+    expect(wrapper.find('[data-testid="time-display-mode"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="display-control"]').exists()).toBe(false);
 
     await wrapper.find('[data-testid="toggle-display-control"]').trigger('click');
     expect(wrapper.find('[data-testid="display-control"]').exists()).toBe(true);
-    const select = wrapper.find('[data-testid="time-unit"]');
+    const select = wrapper.find('[data-testid="time-display-mode"]');
     expect(select.exists()).toBe(true);
-    await select.setValue('us');
-    expect(wrapper.emitted('update:timeUnit')).toEqual([['us']]);
+    expect(select.find('option[value="cycles"]').exists()).toBe(true);
+    await select.setValue('cycles');
+    expect(wrapper.emitted('update:timeDisplayMode')).toEqual([['cycles']]);
     expect(wrapper.find('[data-testid="display-control"]').exists()).toBe(true);
+  });
+
+  it('PR-TOOLBAR-005b: cycles option hidden without clockFreqMHz', async () => {
+    const wrapper = mount(ReportToolbar, { props: defaultProps });
+    await wrapper.find('[data-testid="toggle-display-control"]').trigger('click');
+    const select = wrapper.find('[data-testid="time-display-mode"]');
+    expect(select.find('option[value="time"]').exists()).toBe(true);
+    expect(select.find('option[value="cycles"]').exists()).toBe(false);
   });
 
   it('PR-TOOLBAR-006: emits update:asideVisible when aside toggle is clicked', async () => {
@@ -57,33 +65,9 @@ describe('ReportToolbar', () => {
     expect(wrapper.emitted('update:asideVisible')).toEqual([[true]]);
   });
 
-  it('PR-TOOLBAR-007: measure toggle renders and emits update:measureMode', async () => {
+  it('PR-TOOLBAR-007: measure toggle is temporarily hidden', () => {
     const wrapper = mount(ReportToolbar, { props: { ...defaultProps, measureMode: false } });
-    const btn = wrapper.find('[data-testid="toggle-measure"]');
-    expect(btn.exists()).toBe(true);
-    expect(btn.attributes('aria-pressed')).toBe('false');
-    expect(wrapper.find('[data-testid="measure-icon"]').exists()).toBe(true);
-
-    await btn.trigger('click');
-    expect(wrapper.emitted('update:measureMode')).toEqual([[true]]);
-  });
-
-  it('PR-TOOLBAR-007b: measure toggle reflects active state via aria-pressed and --on', () => {
-    const wrapper = mount(ReportToolbar, { props: { ...defaultProps, measureMode: true } });
-    const btn = wrapper.find('[data-testid="toggle-measure"]');
-    expect(btn.attributes('aria-pressed')).toBe('true');
-    expect(btn.classes()).toContain('pr-toolbar__icon-btn--on');
-  });
-
-  it('PR-TOOLBAR-007c: measure icon arrowheads are open stroke chevrons', () => {
-    const wrapper = mount(ReportToolbar, { props: { ...defaultProps, measureMode: true } });
-    const heads = wrapper.findAll('[data-testid="measure-icon-head"]');
-    expect(heads).toHaveLength(2);
-    for (const head of heads) {
-      expect(head.attributes('fill')).toBe('none');
-      expect(head.attributes('stroke')).toBeTruthy();
-      expect(head.attributes('d') ?? '').not.toMatch(/z$/i);
-    }
+    expect(wrapper.find('[data-testid="toggle-measure"]').exists()).toBe(false);
   });
 
   it('PR-TOOLBAR-008: search magnifier SVG and zoom compound pill chrome', () => {
@@ -139,23 +123,31 @@ describe('ReportToolbar', () => {
     expect(wrapper.find('[data-testid="display-control"]').exists()).toBe(false);
   });
 
-  it('PR-TOOLBAR-011: 显示控制 carries the dependency depth field', async () => {
+  it('PR-TOOLBAR-011: dependency-mode select emits update:dependencyMode; popover stays open', async () => {
     const wrapper = mount(ReportToolbar, { props: defaultProps });
     await wrapper.find('[data-testid="toggle-display-control"]').trigger('click');
+    const select = wrapper.find('[data-testid="dependency-mode"]');
+    expect(select.exists()).toBe(true);
+    await select.setValue('predecessors');
+    expect(wrapper.emitted('update:dependencyMode')).toEqual([['predecessors']]);
+    await select.setValue('successors');
+    expect(wrapper.emitted('update:dependencyMode')).toEqual([['predecessors'], ['successors']]);
+    expect(wrapper.find('[data-testid="display-control"]').exists()).toBe(true);
+  });
 
-    const field = wrapper.find('[data-testid="dependency-depth"]');
-    expect(field.exists()).toBe(true);
-    expect((field.element as HTMLInputElement).value).toBe('1');
-
-    // Commits on change, not on every keystroke — a half-typed number must not
-    // rebuild the graph.
-    await field.setValue('5');
-    await field.trigger('change');
-    expect(wrapper.emitted('update:dependencyDepth')?.at(-1)).toEqual([5]);
-
-    // Cleared field falls back to the shared default instead of emitting NaN.
-    await field.setValue('');
-    await field.trigger('change');
-    expect(wrapper.emitted('update:dependencyDepth')?.at(-1)).toEqual([1]);
+  it('PR-TOOLBAR-012: dependency-depth input emits update:dependencyDepth; popover stays open', async () => {
+    const wrapper = mount(ReportToolbar, { props: defaultProps });
+    await wrapper.find('[data-testid="toggle-display-control"]').trigger('click');
+    const input = wrapper.find('[data-testid="dependency-depth"]');
+    expect(input.exists()).toBe(true);
+    await input.setValue('2');
+    expect(wrapper.emitted('update:dependencyDepth')).toEqual([[2]]);
+    await input.setValue('-1');
+    expect(wrapper.emitted('update:dependencyDepth')).toEqual([[2], [-1]]);
+    await input.setValue('-5');
+    expect(wrapper.emitted('update:dependencyDepth')?.at(-1)).toEqual([-1]);
+    await input.setValue('999999');
+    expect(wrapper.emitted('update:dependencyDepth')?.at(-1)).toEqual([100]);
+    expect(wrapper.find('[data-testid="display-control"]').exists()).toBe(true);
   });
 });

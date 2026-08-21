@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { buildAxisRulerTicks } from '../../../domain/axisRuler';
-import type { TimeDisplayUnit } from '../../../domain/types';
+import {
+  buildAxisRulerTicks,
+  resolveTimeUnitFromAxisDensity,
+} from '../../../domain/axisRuler';
+import type { TimeDisplayMode } from '../../../domain/types';
 import { bindWindowPointerDrag } from '../measureEdgeResize';
 import AxisRuler from '../TimeAxis/AxisRuler/AxisRuler.vue';
 
@@ -10,7 +13,8 @@ const props = defineProps<{
   maxTime: number;
   startTime: number;
   endTime: number;
-  timeUnit: TimeDisplayUnit;
+  timeDisplayMode: TimeDisplayMode;
+  clockFreqMHz?: number;
 }>();
 
 const emit = defineEmits<{
@@ -38,12 +42,19 @@ const rightPct = computed(
 );
 const widthPct = computed(() => Math.max(0.4, rightPct.value - leftPct.value));
 
+/** Overview unit from total span × width only — brush window must not affect it. */
+const overviewTimeScaleUnit = computed(() =>
+  resolveTimeUnitFromAxisDensity(fullSpan.value, trackWidth.value),
+);
+
 const ruler = computed(() =>
   buildAxisRulerTicks({
     rangeStart: props.minTime,
     rangeEnd: props.maxTime,
     origin: props.minTime,
-    timeUnit: props.timeUnit,
+    timeDisplayMode: props.timeDisplayMode,
+    timeScaleUnit: overviewTimeScaleUnit.value,
+    clockFreqMHz: props.clockFreqMHz,
     widthPx: trackWidth.value,
     muteOutside: { start: props.startTime, end: props.endTime },
   }),
@@ -67,6 +78,26 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect();
   resizeObserver = null;
 });
+
+function endDrag() {
+  unbindWindowDrag?.();
+  unbindWindowDrag = null;
+  dragMode = null;
+}
+
+function applyDragMove(clientX: number) {
+  if (!dragMode || !rootRef.value) return;
+  const rect = rootRef.value.getBoundingClientRect();
+  const dxRatio = (clientX - dragOriginX) / Math.max(1, rect.width);
+  const dt = dxRatio * fullSpan.value;
+  if (dragMode === 'move') {
+    emit('update:window', clampWindow(dragStart + dt, dragEnd + dt));
+  } else if (dragMode === 'left') {
+    emit('update:window', clampWindow(dragStart + dt, dragEnd));
+  } else if (dragMode === 'right') {
+    emit('update:window', clampWindow(dragStart, dragEnd + dt));
+  }
+}
 
 function clientToTime(clientX: number): number {
   const el = rootRef.value;
@@ -98,26 +129,6 @@ function clampWindow(start: number, end: number): { startTime: number; endTime: 
   return { startTime: s, endTime: e };
 }
 
-function endDrag() {
-  unbindWindowDrag?.();
-  unbindWindowDrag = null;
-  dragMode = null;
-}
-
-function applyDragMove(clientX: number) {
-  if (!dragMode || !rootRef.value) return;
-  const rect = rootRef.value.getBoundingClientRect();
-  const dxRatio = (clientX - dragOriginX) / Math.max(1, rect.width);
-  const dt = dxRatio * fullSpan.value;
-  if (dragMode === 'move') {
-    emit('update:window', clampWindow(dragStart + dt, dragEnd + dt));
-  } else if (dragMode === 'left') {
-    emit('update:window', clampWindow(dragStart + dt, dragEnd));
-  } else if (dragMode === 'right') {
-    emit('update:window', clampWindow(dragStart, dragEnd + dt));
-  }
-}
-
 function onPointerDown(e: PointerEvent, mode: DragMode) {
   if (!mode || e.button !== 0) return;
   endDrag();
@@ -141,6 +152,7 @@ function onTrackPointerDown(e: PointerEvent) {
   const center = clientToTime(e.clientX);
   emit('update:window', clampWindow(center - span / 2, center + span / 2));
 }
+
 </script>
 
 <template>
