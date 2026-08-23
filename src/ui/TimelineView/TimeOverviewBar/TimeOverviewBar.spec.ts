@@ -83,7 +83,7 @@ describe('TimeOverviewBar', () => {
         maxTime: 1000,
         startTime: 200,
         endTime: 500,
-        timeUnit: 'ms',
+        timeDisplayMode: 'time',
       },
       attachTo: document.body,
     });
