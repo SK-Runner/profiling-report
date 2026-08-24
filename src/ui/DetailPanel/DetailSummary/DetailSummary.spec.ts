@@ -48,7 +48,8 @@ describe('DetailSummary', () => {
           endTime: 10,
           args: { op_type: 'MOV_OUT_TO_L1_MULTI_ND2NZ' },
         },
-        unit: 'ns',
+        timeDisplayMode: 'time',
+        timeScaleUnit: 'ns',
       },
     });
     expect(withType.find('[data-testid="detail-summary-kind"]').text()).toBe(
@@ -58,7 +59,8 @@ describe('DetailSummary', () => {
     const without = mount(DetailSummary, {
       props: {
         selected: { id: '1', name: 'FIX_LOC_TO_DST', startTime: 0, duration: 10, endTime: 10 },
-        unit: 'ns',
+        timeDisplayMode: 'time',
+        timeScaleUnit: 'ns',
       },
     });
     expect(without.find('[data-testid="detail-summary-kind"]').exists()).toBe(false);
@@ -76,7 +78,8 @@ describe('DetailSummary', () => {
           endTime: 708_421_242_164_456,
           args: { op_type: 'event' },
         },
-        unit: 'ms',
+        timeDisplayMode: 'time',
+        timeScaleUnit: 'ms',
       },
     });
 
