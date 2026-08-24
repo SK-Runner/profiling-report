@@ -115,12 +115,14 @@ Composite of search + zoom + actions at chrome height for layout spacing.
 5. **PR-TOOLBAR-005** — Layers opens 显示控制; mode select emits `update:timeDisplayMode`.
 5. **PR-TOOLBAR-005b** — Cycles option hidden without freq.
 6. **PR-TOOLBAR-006** — Emits `update:asideVisible` on toggle.
-7. **PR-TOOLBAR-007** — Measure toggle (`toggle-measure`) is not rendered (temporarily hidden).
-8. **PR-TOOLBAR-008** — Search exposes a magnifier SVG; zoom root uses compound pill class; zoom ± are icon buttons (not bare text-only ± outside a pill).
-9. **PR-TOOLBAR-009** — Strip uses `--pr-bg-deep`; search `#2a2a2a`; zoom pill `#363636`; zoom track filled `#ffffff` / unfilled `#1a1a1a`.
-10. **PR-TOOLBAR-010** — Display-control popover closes via X or toggling the layers button.
-11. **PR-TOOLBAR-011** — `dependency-mode` select inside 显示控制 emits `update:dependencyMode` on change; popover stays open.
-12. **PR-TOOLBAR-012** — `dependency-depth` input inside 显示控制 emits `update:dependencyDepth` on change (values below −1 clamp to −1, above 100 clamp to 100); popover stays open.
+7. **PR-TOOLBAR-007** — Measure toggle (`toggle-measure`) renders bars + open stroke Δt arrow (chevron heads, gap from bars); emits `update:measureMode` on click.
+8. **PR-TOOLBAR-007b** — Active measure toggle uses `aria-pressed="true"` and `--on`.
+9. **PR-TOOLBAR-007c** — Measure SVG arrowheads use `fill="none"` (stroke chevrons only; no filled triangle paths).
+10. **PR-TOOLBAR-008** — Search exposes a magnifier SVG; zoom root uses compound pill class; zoom ± are icon buttons (not bare text-only ± outside a pill).
+11. **PR-TOOLBAR-009** — Strip uses `--pr-bg-deep`; search `#2a2a2a`; zoom pill `#363636`; zoom track filled `#ffffff` / unfilled `#1a1a1a`.
+12. **PR-TOOLBAR-010** — Display-control popover closes via X or toggling the layers button.
+13. **PR-TOOLBAR-011** — `dependency-mode` select inside 显示控制 emits `update:dependencyMode` on change; popover stays open.
+14. **PR-TOOLBAR-012** — `dependency-depth` input inside 显示控制 emits `update:dependencyDepth` on change (values below −1 clamp to −1, above 100 clamp to 100); popover stays open.
 
 ## Edge Cases
 
