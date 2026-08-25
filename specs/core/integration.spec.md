@@ -37,12 +37,15 @@ Outside-in tests verifying the full component tree and playground render correct
 1. **PR-E2E-008**: Active measure toggle has `aria-pressed="true"` and open-stroke Δt arrowheads (`fill="none"`); geometry covered by `PR-TOOLBAR-007c`.
 1. **PR-E2E-009**: Relevent connector curves meet their chips flush, at any name length.
 1. **PR-E2E-010**: Dragging the dock taller grows its columns with it.
+1. **PR-E2E-011**: Shift+drag marquees real events into the multi-select dock; bars fill against the widest row; a Name click hands off to DetailPanel.
+1. **PR-E2E-012**: Escape cancels a marquee mid-drag and clears a committed one.
 
 ## Dependencies
 
 [UX_SPEC.md](../../docs/ui/UX_SPEC.md) (scenarios S1–S3), [INTERACTIONS.md](../../docs/ui/INTERACTIONS.md).
 
 ## Changelog
+- **2026-08-25** — PR-E2E-011/012: marquee multi-select in Chromium. Only a real browser has the gutter resize handle overlapping the canvas's left edge and a layout engine that sizes the inline bars, so jsdom cannot catch either.
 - **2026-08-20** — PR-E2E-008 structural (no pixel crop diff); defers icon geometry to PR-TOOLBAR-007c.
 - **2026-08-20** — PR-E2E-009: chip-to-curve join measured in a real layout engine. Chips are content-sized in jsdom too, so only a browser can catch a short name sitting ~28px short of its connector.
 - **2026-08-19** — PR-E2E-007: Chromium WebGL dependency curves (`ffn_dense`).

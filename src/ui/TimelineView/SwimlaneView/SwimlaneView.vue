@@ -33,6 +33,7 @@ const props = withDefaults(
     view: SwimlaneViewState;
     selectedEventId: string | null;
     hoveredEventId: string | null;
+    multiSelectedIds?: string[];
     searchQuery: string;
     measureMode?: boolean;
     measureRange?: MeasureRange | null;
@@ -48,6 +49,7 @@ const props = withDefaults(
     dependencyMode: 'all',
     dependencyDepth: DEFAULT_DEPENDENCY_DEPTH,
     cursorXRatio: null,
+    multiSelectedIds: () => [],
   },
 );
 
@@ -56,6 +58,7 @@ const emit = defineEmits<{
   'update:gutterWidth': [width: number];
   'toggle-group': [groupId: string];
   select: [event: SwimEvent | null];
+  'multi-select': [events: SwimEvent[]];
   hover: [event: SwimEvent | null, clientX: number, clientY: number];
   cursor: [payload: { time: number; xRatio: number } | null];
   pan: [deltaTime: number];
@@ -257,6 +260,7 @@ defineExpose({
       :view="view"
       :selected-event-id="selectedEventId"
       :hovered-event-id="hoveredEventId"
+      :multi-selected-ids="multiSelectedIds"
       :search-query="searchQuery"
       :measure-mode="measureMode"
       :measure-range="measureRange"
@@ -265,6 +269,7 @@ defineExpose({
       :dependency-depth="dependencyDepth"
       :prefer-renderer="preferRenderer ?? 'auto'"
       @select="emit('select', $event)"
+      @multi-select="emit('multi-select', $event)"
       @hover="(ev, x, y) => emit('hover', ev, x, y)"
       @cursor="onCursor"
       @set-playhead="emit('set-playhead', $event)"

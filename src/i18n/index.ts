@@ -76,6 +76,14 @@ const messages = {
     depsDownstream: '仅展示后向依赖',
     noDependencies: '无依赖数据',
     noParameters: '无参数',
+    // Marquee multi-select dock (v930/task-marquee). The sketch keeps the table
+    // headers in English in the zh-CN UI, same as Parameter / Relevent above.
+    itemsSelected: '已选中 {n} 项。',
+    slices: 'Slices',
+    wallDuration: 'Wall Duration',
+    selfTime: 'Self time',
+    avgWallDuration: 'Average Wall Duration',
+    sortColumn: '排序',
   },
   en: {
     searchPlaceholder: 'Search',
@@ -150,6 +158,12 @@ const messages = {
     depsDownstream: 'Downstream dependencies only',
     noDependencies: 'No dependency data',
     noParameters: 'No parameters',
+    itemsSelected: '{n} items selected.',
+    slices: 'Slices',
+    wallDuration: 'Wall Duration',
+    selfTime: 'Self time',
+    avgWallDuration: 'Average Wall Duration',
+    sortColumn: 'Sort',
   },
 } as const;
 

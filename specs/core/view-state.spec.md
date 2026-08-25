@@ -8,6 +8,9 @@ Pure functions managing swimlane viewport — zoom, pan, window boundaries, zoom
 
 ```ts
 createViewState(model: SwimlaneModel | null | undefined): SwimlaneViewState
+setSelectedEvent(state: SwimlaneViewState, eventId: string | null): SwimlaneViewState
+setMultiSelection(state: SwimlaneViewState, eventIds: string[]): SwimlaneViewState
+clearSelection(state: SwimlaneViewState): SwimlaneViewState
 zoomAt(view: SwimlaneViewWindow, factor: number, anchorTime: number, bounds?: Bounds): SwimlaneViewWindow
 panBy(view: SwimlaneViewWindow, deltaTime: number, bounds?: Bounds): SwimlaneViewWindow
 zoomToFitWindow(model: SwimlaneModel | null | undefined): SwimlaneViewWindow
@@ -21,7 +24,9 @@ spanFromZoomPercent(pct: number, fullSpan: number): number
 
 **Immutability.** All functions return new objects. The parent ProfilingReport uses `{ ...viewState.value, ...patch }` to trigger Vue reactivity — mutating in place would prevent the deep watcher in SwimlaneCanvas from detecting changes.
 
-**Initialization.** `createViewState` initializes from a SwimlaneModel, defaulting to zoom-to-fit with zero scroll, no selection/hover, empty search, aside visible, no playhead, `measureMode: false`, `measureRange: null`.
+**Initialization.** `createViewState` initializes from a SwimlaneModel, defaulting to zoom-to-fit with zero scroll, no selection/hover, empty `multiSelectedIds`, empty search, aside visible, no playhead, `measureMode: false`, `measureRange: null`.
+
+**Selection exclusivity.** Single-select (`selectedEventId`) and marquee multi-select (`multiSelectedIds`) are mutually exclusive — only one dock mounts. `setSelectedEvent` and `setMultiSelection` each clear the other side, so callers never have to remember to; `clearSelection` drops both (empty-space click, Escape, empty marquee commit). `setMultiSelection` copies the id array, so a caller's later mutation cannot reach state.
 
 **Measure (M2).** `setMeasureMode` / `setMeasureRange` / `clearMeasure` update measure fields immutably. Range endpoints are order-normalized (`startTime <= endTime`, ns units matching the viewport). Clearing / disabling measure nulls the range. Local overlay only — does not drive aside recompute. `measureFocusWindow` centers a measured range so it spans half the visible width (25% padding each side), clamps to bounds, and fits the full bounds when 2× duration exceeds the trace.
 
@@ -48,6 +53,7 @@ spanFromZoomPercent(pct: number, fullSpan: number): number
 9. **PR-VIEW-009** — zoomPercent ↔ span round-trip.
 10. **PR-VIEW-010** — slider max matches zoomAt floor.
 11. **PR-VIEW-011** — zoomToFitWindow for `minTime === maxTime` uses `[minTime, minTime + MIN_WINDOW]` (aligned with bounds).
+12. **PR-VIEW-012** — single/multi select are exclusive; clearSelection drops both.
 
 ## Edge Cases
 
@@ -65,9 +71,11 @@ spanFromZoomPercent(pct: number, fullSpan: number): number
 Multi-touch pinch zoom (P2). M2 measure fields.
 
 ## Changelog
+- **2026-08-25** — `multiSelectedIds` + exclusivity helpers for marquee multi-select (PR-VIEW-012).
 - **2026-08-25** — Degenerate minTime===maxTime fit stays in minTime space (PR-VIEW-011).
 - **2026-08-25** — zoomToFit restored to `[minTime, maxTime]`; display origin is minTime (PyPTO/Perfetto default).
 - **2026-08-24** — zoomToFit starts at producer t=0 (events align with absolute axis/tooltip).
+- **2026-08-21** — Shared zoomPercent ↔ span helpers; slider 100 = MIN_WINDOW (PR-VIEW-008…010).
 - **2026-08-21** — Document measureFocusWindow; PR-VIEW-006/007.
 - **2026-08-07** — Note M2 measure as planned; no AC until coded.
 - **2026-08-05** — Initial spec. Core behaviors established.

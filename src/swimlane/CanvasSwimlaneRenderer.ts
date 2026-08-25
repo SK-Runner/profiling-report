@@ -113,6 +113,7 @@ export class SwimlaneOverlayPainter {
   private selectedId: string | null = null;
   private hoveredId: string | null = null;
   private neighborIds = new Set<string>();
+  private multiIds = new Set<string>();
   private searchQuery = '';
   private width = 0;
   private height = 0;
@@ -158,6 +159,10 @@ export class SwimlaneOverlayPainter {
     this.searchQuery = query.trim().toLowerCase();
   }
 
+  setMultiSelection(ids: string[]): void {
+    this.multiIds = new Set(ids);
+  }
+
 
   render(): void {
     const ctx = this.ctx;
@@ -170,7 +175,7 @@ export class SwimlaneOverlayPainter {
     const span = Math.max(1, this.view.endTime - this.view.startTime);
     const q = this.searchQuery;
     const hasSearch = q.length > 0;
-    const hasSelection = this.selectedId != null;
+    const hasSelection = this.selectedId != null || this.multiIds.size > 0;
     const bright = this.neighborIds;
 
     for (const item of this.layout.events) {
@@ -184,7 +189,12 @@ export class SwimlaneOverlayPainter {
       if (y + h < 0 || y > this.height) continue;
 
       const matches = !hasSearch || ev.name.toLowerCase().includes(q);
-      const dim = eventEmphasisDim(matches, bright.has(item.id), hasSearch, hasSelection);
+      const dim = eventEmphasisDim(
+        matches,
+        bright.has(item.id) || this.multiIds.has(item.id),
+        hasSearch,
+        hasSelection,
+      );
 
       if (item.id === this.selectedId) {
         ctx.strokeStyle = '#ffffff';
@@ -210,6 +220,7 @@ export class SwimlaneOverlayPainter {
     this.ctx = null;
     this.layout = EMPTY_LAYOUT;
     this.neighborIds = new Set();
+    this.multiIds = new Set();
   }
 }
 
@@ -222,6 +233,7 @@ export class CanvasSwimlaneRenderer implements SwimlaneRenderer {
   private selectedId: string | null = null;
   private hoveredId: string | null = null;
   private neighborIds = new Set<string>();
+  private multiIds = new Set<string>();
   private depLinks: DependencyLink[] = [];
   private depMode: DependencyMode = 'all';
   private depDepth = DEFAULT_DEPENDENCY_DEPTH;
@@ -280,6 +292,10 @@ export class CanvasSwimlaneRenderer implements SwimlaneRenderer {
     if (d === this.depDepth) return;
     this.depDepth = d;
     this.refreshDepCache();
+  }
+
+  setMultiSelection(ids: string[]): void {
+    this.multiIds = new Set(ids);
   }
 
 
@@ -352,7 +368,8 @@ export class CanvasSwimlaneRenderer implements SwimlaneRenderer {
     const span = Math.max(1, this.view.endTime - this.view.startTime);
     const q = this.searchQuery;
     const hasSearch = q.length > 0;
-    const hasSelection = this.selectedId != null;
+    // Marquee selection dims the rest with the same factor as a single click.
+    const hasSelection = this.selectedId != null || this.multiIds.size > 0;
     const bright = this.neighborIds;
     const visible: {
       item: LaidOutEvent;
@@ -375,7 +392,12 @@ export class CanvasSwimlaneRenderer implements SwimlaneRenderer {
       if (y + h < 0 || y > this.height) continue;
 
       const matches = !hasSearch || ev.name.toLowerCase().includes(q);
-      const dim = eventEmphasisDim(matches, bright.has(item.id), hasSearch, hasSelection);
+      const dim = eventEmphasisDim(
+        matches,
+        bright.has(item.id) || this.multiIds.has(item.id),
+        hasSearch,
+        hasSelection,
+      );
       ctx.globalAlpha = dim;
       ctx.fillStyle = item.color;
       roundRectPath(ctx, x, y, w, h, EVENT_RADIUS);
@@ -410,6 +432,7 @@ export class CanvasSwimlaneRenderer implements SwimlaneRenderer {
     this.ctx = null;
     this.layout = EMPTY_LAYOUT;
     this.neighborIds = new Set();
+    this.multiIds = new Set();
     this.depLinks = [];
   }
 }

@@ -310,6 +310,8 @@ export interface SwimlaneViewState {
   scrollY: number;
   selectedEventId: string | null;
   hoveredEventId: string | null;
+  /** Marquee multi-selection; mutually exclusive with `selectedEventId`. Local panel until Q22. */
+  multiSelectedIds: string[];
   searchQuery: string;
   asideVisible: boolean;
   playheadTime: number | null;
@@ -336,6 +338,8 @@ export interface SwimlaneRenderer {
   setDependencyMode?(mode: DependencyMode): void;
   /** Optional: hosts that omit this keep default hop depth. */
   setDependencyDepth?(depth: number): void;
+  /** Optional: marquee multi-selection ids; empty clears the dim. */
+  setMultiSelection?(ids: string[]): void;
   contentHeight(): number;
   eventScreenRect(eventId: string): { x: number; y: number; w: number; h: number } | null;
   findEvent(id: string): SwimEvent | null;

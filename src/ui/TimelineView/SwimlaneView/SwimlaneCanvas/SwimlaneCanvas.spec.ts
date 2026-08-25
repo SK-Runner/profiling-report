@@ -785,4 +785,151 @@ describe('SwimlaneCanvas', () => {
     expect(src).toMatch(/measureGeometry = computed\(\(\) => \{\s*void resizeTick\.value/s);
     expect(src).toMatch(/measurePreviewGeometry = computed\(\(\) => \{\s*void resizeTick\.value/s);
   });
+
+  /** Marquee lives on the same canvas but is Shift-gated, so measure mode is off here. */
+  async function mountForMarquee() {
+    return mountWithEventModel({ measureMode: false });
+  }
+
+  it('PR-CANVAS-027: Shift+drag past 4px draws the marquee and commits intersecting events', async () => {
+    const { wrapper, canvas } = await mountForMarquee();
+    const rect = (
+      wrapper.vm as { eventScreenRect: (id: string) => { x: number; y: number; w: number; h: number } | null }
+    ).eventScreenRect('e1')!;
+    const y = rect.y + rect.h / 2;
+
+    await canvas.trigger('pointerdown', {
+      clientX: rect.x - 20,
+      clientY: rect.y - 4,
+      pointerId: 1,
+      shiftKey: true,
+    });
+    // Under the threshold: no rect yet.
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.x - 18, clientY: rect.y - 3, buttons: 1 }),
+    );
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="marquee-rect"]').exists()).toBe(false);
+
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: rect.x + rect.w / 2,
+        clientY: y + 4,
+        buttons: 1,
+      }),
+    );
+    await wrapper.vm.$nextTick();
+    const marquee = wrapper.get('[data-testid="marquee-rect"]');
+    expect(marquee.attributes('style')).toMatch(/left:\s*\d/);
+
+    window.dispatchEvent(
+      new PointerEvent('pointerup', { clientX: rect.x + rect.w / 2, clientY: y + 4 }),
+    );
+    await wrapper.vm.$nextTick();
+    const committed = wrapper.emitted('multi-select')!.at(-1)![0] as { id: string }[];
+    expect(committed.map((e) => e.id)).toEqual(['e1']);
+    // Rect is cleared on commit, and the press does not also select.
+    expect(wrapper.find('[data-testid="marquee-rect"]').exists()).toBe(false);
+    expect(wrapper.emitted('select')).toBeFalsy();
+    wrapper.unmount();
+  });
+
+  it('PR-CANVAS-028: a marquee that misses every block commits an empty selection', async () => {
+    const { wrapper, canvas } = await mountForMarquee();
+    const rect = (
+      wrapper.vm as { eventScreenRect: (id: string) => { x: number; y: number; w: number; h: number } | null }
+    ).eventScreenRect('e1')!;
+    // Well right of the event's end edge, same lane.
+    const startX = rect.x + rect.w + 40;
+    await canvas.trigger('pointerdown', {
+      clientX: startX,
+      clientY: rect.y,
+      pointerId: 1,
+      shiftKey: true,
+    });
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: startX + 60, clientY: rect.y + 10, buttons: 1 }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', { clientX: startX + 60, clientY: rect.y + 10 }),
+    );
+    await wrapper.vm.$nextTick();
+    expect(wrapper.emitted('multi-select')!.at(-1)![0]).toEqual([]);
+    wrapper.unmount();
+  });
+
+  it('PR-CANVAS-029: marquee suppresses pan, tooltip and select; pointerleave does not cancel', async () => {
+    const { wrapper, canvas } = await mountForMarquee();
+    const rect = (
+      wrapper.vm as { eventScreenRect: (id: string) => { x: number; y: number; w: number; h: number } | null }
+    ).eventScreenRect('e1')!;
+
+    await canvas.trigger('pointerdown', {
+      clientX: rect.x - 20,
+      clientY: rect.y - 4,
+      pointerId: 1,
+      shiftKey: true,
+    });
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.x + 20, clientY: rect.y + 8, buttons: 1 }),
+    );
+    // A canvas pointermove during the drag must not pan or emit a hovered event.
+    await canvas.trigger('pointermove', { clientX: rect.x + 30, clientY: rect.y + 8 });
+    expect(wrapper.emitted('pan')).toBeFalsy();
+    expect(wrapper.emitted('hover')!.at(-1)![0]).toBeNull();
+
+    // Leaving the canvas keeps the gesture alive (window-bound, same as measure create).
+    await canvas.trigger('pointerleave', { clientX: 500, clientY: 8 });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="marquee-rect"]').exists()).toBe(true);
+
+    await canvas.trigger('pointerup', { clientX: rect.x + 30, clientY: rect.y + 8, pointerId: 1 });
+    expect(wrapper.emitted('select')).toBeFalsy();
+    expect(wrapper.emitted('set-playhead')).toBeFalsy();
+
+    window.dispatchEvent(
+      new PointerEvent('pointerup', { clientX: rect.x + 30, clientY: rect.y + 8 }),
+    );
+    expect(wrapper.emitted('multi-select')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('PR-CANVAS-030: Escape during the drag cancels without committing', async () => {
+    const { wrapper, canvas } = await mountForMarquee();
+    const rect = (
+      wrapper.vm as { eventScreenRect: (id: string) => { x: number; y: number; w: number; h: number } | null }
+    ).eventScreenRect('e1')!;
+
+    await canvas.trigger('pointerdown', {
+      clientX: rect.x - 20,
+      clientY: rect.y - 4,
+      pointerId: 1,
+      shiftKey: true,
+    });
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.x + 20, clientY: rect.y + 8, buttons: 1 }),
+    );
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="marquee-rect"]').exists()).toBe(true);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="marquee-rect"]').exists()).toBe(false);
+
+    window.dispatchEvent(
+      new PointerEvent('pointerup', { clientX: rect.x + 20, clientY: rect.y + 8 }),
+    );
+    expect(wrapper.emitted('multi-select')).toBeFalsy();
+    wrapper.unmount();
+  });
+
+  it('PR-CANVAS-031: plain (no-Shift) drag still pans and never marquees', async () => {
+    const { wrapper, canvas } = await mountForMarquee();
+    await canvas.trigger('pointerdown', { clientX: 40, clientY: 30, pointerId: 1 });
+    await canvas.trigger('pointermove', { clientX: 90, clientY: 30, pointerId: 1 });
+    expect(wrapper.find('[data-testid="marquee-rect"]').exists()).toBe(false);
+    expect(wrapper.emitted('pan')?.length).toBeGreaterThan(0);
+    expect(wrapper.emitted('multi-select')).toBeFalsy();
+    wrapper.unmount();
+  });
 });
