@@ -23,7 +23,7 @@ nsToCycles(ns, clockFreqMHz): number
 
 **Modes.** `time` = wall time with auto `TimeScaleUnit` (`s` / `ms` / `us` / `ns`). `cycles` = display CPU clocks via `cycles = ns × freqMHz / 1000` with `freqMHz` from `resolveClockFreqMHz` (`currentFreq ?? ratedFreq`, MHz); missing freq → `—`.
 
-**Cycles mode (I-Q14).** Labels are a **time×freq conversion** for axis, cursor, tooltip, and detail — not per-event PMU `*_total_cycles` from `PipeUtilization`. Prefer **Current Freq** over Rated when both exist. On `data/out.rep`, `aiv_total_cycles / aiv_time(us)` matches OpBasicInfo `Current Freq` (1650), so the formula is consistent with measured block cycles for that fixture. Assumes swimlane ns timestamps share the AIC clock domain; do not use `HardwareInfo.ai_core_frequency_MHZ` for this path.
+**Cycles mode (I-Q14).** Labels are a **time×freq conversion** for axis, cursor, tooltip, and detail — not per-event PMU `*_total_cycles` from `PipeUtilization`. Prefer **Current Freq** over Rated when both exist. On `data/out.rep`, `aiv_total_cycles / aiv_time(us)` matches OpBasicInfo `Current Freq` (1650), so the formula is consistent with measured block cycles for that fixture. Assumes swimlane ns timestamps share the AIC clock domain; do not use `HardwareInfo.ai_core_frequency_MHZ` for this path. **Open:** true vs derived — [Q23](../../docs/context/OPEN_QUESTIONS.md) / [HQ 38](../../docs/context/HQ_OPEN_QUESTIONS.md).
 
 **Auto scale (time mode).** Viewport chrome uses `resolveTimeUnitFromVisibleRange(end − start)`. Overview / total axis uses major-tick step from span×width (`resolveTimeUnitFromAxisDensity` in axisRuler) — brush window must not change overview unit.
 
@@ -48,7 +48,7 @@ Zero → compact `'0ms'` on axis (via PR-TIME-004); tooltip `formatTime(0)` stil
 
 ## Dependencies
 
-I-Q14 — Time (auto) vs CPU clocks; freq from `currentFreq ?? ratedFreq`; see [INTERIM_DECISIONS I-Q14](../../docs/context/INTERIM_DECISIONS.md#i-q14--cpu-clocks-from-opbasicinfo-freq).
+I-Q14 — Time (auto) vs CPU clocks; freq from `currentFreq ?? ratedFreq`; see [INTERIM_DECISIONS I-Q14](../../docs/context/INTERIM_DECISIONS.md#i-q14--cpu-clocks-from-opbasicinfo-freq). Open cycle source: [Q23](../../docs/context/OPEN_QUESTIONS.md) / [HQ 38](../../docs/context/HQ_OPEN_QUESTIONS.md).
 
 ## Changelog
 - **2026-08-24** — Document cycles-mode freq source, formula, fixture cross-check, and caveats; formatTimeParts with mode/opts.

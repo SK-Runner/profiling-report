@@ -10,7 +10,7 @@ When a question is answered: write it into the owning specs and **remove** it fr
 
 Design mockups: [`DESIGN_INDEX.md`](../ui/DESIGN_INDEX.md) · one annotated crop per question below · sources [`docs/ui/source/v930/`](../ui/source/v930/) · component crops under `src/ui/**/visual/` ([regenerate](visual/hq/README.md))
 
-**Numbering.** This ledger is **HQ 1–37** (`q1.png`…`q37.png`). It is not the Q1–Q23 space in [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) — resolved OPEN Q22 (measure aside) is not HQ 22 (UB→L2/GM).
+**Numbering.** This ledger is **HQ 1–38** (`q1.png`…`q38.png`). It is not the Q1–Q23 space in [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) — resolved OPEN Q22 (measure aside) is not HQ 22 (UB→L2/GM); OPEN **Q23** (timeline clocks source) is HQ **38**.
 
 - **INTERIM** — we already ship a rule in [INTERIM_DECISIONS.md](INTERIM_DECISIONS.md); Product can still override.
 - **PARTIAL** — field name known, but a value or a product decision is still missing.
@@ -341,3 +341,15 @@ UI/UX = presentation, missing-input behavior, layout, units, gestures.
 
 37. CSV **详情** (details) search currently **highlights** matching header substrings (navy chip on `aic_mte3`) and keeps every row. Should it also **filter** — hide non-matching rows? Highlight only, filter only, or both? Same rule for compute and memory overlays?
     - **OPEN** — we shipped highlight-only ([PR #32](https://github.com/IdeFrontend/profiling-report/pull/32)) to match this sketch. [UX_SPEC](../ui/UX_SPEC.md) still says the pipe field list filters rows. Product has not picked.
+
+### Task display unit / CPU clocks (显示控制)
+
+**Design:** [`v930/hardware-more-detail`](../ui/source/v930/hardware-more-detail.jpeg) · [`display-control.png`](../../src/ui/ReportToolbar/visual/display-control.png)
+
+<img src="visual/hq/q38.png" alt="Q38 task display unit Time vs CPU clocks" width="475" height="260">
+
+38. Timeline **CPU clocks** / **时钟周期** — must values be **true** cycle-domain timestamps or counters from the producer, or is **derived** `ns × OpBasicInfo` Current/Rated Freq acceptable for axis, cursor, and measure?
+    - **A (interim / shipping):** derived labels via [I-Q14](INTERIM_DECISIONS.md); swimlane geometry stays ns. Not pass-through of block `aic_total_cycles` / `aiv_total_cycles`.
+    - **B:** drop axis-wide cycles mode; show real `*_total_cycles` only in detail/aside where present.
+    - **C:** producer adds per-event cycle timestamps (`start_cycles`/`end_cycles` or cycle-tick `ts`/`dur`); then the axis can be native without inference.
+    - **INTERIM** — option **A**. Same Product ask: [OPEN_QUESTIONS](OPEN_QUESTIONS.md) **Q23**. Why open: embeds only have block-level `*_total_cycles`; no event cycle positions for gaps/measure.

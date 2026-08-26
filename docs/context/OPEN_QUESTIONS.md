@@ -54,9 +54,10 @@ Producer **format/data specification is still forthcoming**. Product has answere
 | **Q11** | Roofline formulas | Open | METRICS_AND_TRACE, UI_OVERVIEW, FEATURE_MATRIX, COMPONENTS |
 | **Q12** | Memory topology | **Resolved** | Static SVG + data-driven edge labels. |
 | **Q13** | Color / category legend | **Resolved** | [COLOR_TOKENS.md](../ui/COLOR_TOKENS.md) |
-| **Q14** | Time units UX | **Resolved (interim)** | Time (auto) vs CPU clocks; auto s/ms/µs/ns; freq from OpBasicInfo — [I-Q14](INTERIM_DECISIONS.md). |
+| **Q14** | Time units UX | **Resolved (interim)** | Time (auto) vs CPU clocks control + auto s/ms/µs/ns — [I-Q14](INTERIM_DECISIONS.md). Cycle *source* (true vs derived) → **Q23** / [HQ 38](HQ_OPEN_QUESTIONS.md). |
 | **Q15** | MSTT `.json` policy | **Resolved** | Chrome Trace `.json` → profiling-report. |
 | **Q22** | Time-range measure → which views? | **Open** | When timeline **度量模式** sets `measureRange [t0,t1]` ([`v930/task-measure-mode`](../ui/source/v930/task-measure-mode.jpeg)), which views must update? Candidates: PIPE / Cube·Vector bars; compute-load detail tabs; memory detail tabs + topology; report summary; detail strip; overview charts (if present). Distinct from overview brush (`timeWindow`) and event selection. Until answered: measure UI is **local overlay only** (band + Δt; no aside recompute). Specs when answered: UX_SPEC sync, INTERACTIONS, FEATURE_MATRIX, COMPONENTS, view-state / StatsAside. |
+| **Q23** | Timeline CPU clocks — true vs derived | **Open** + **Interim** | Must timeline “CPU clocks” use **true** cycle-domain timestamps/counters from the producer, or is **derived** `ns × OpBasicInfo freq` acceptable? **A (interim / shipping):** derived via [I-Q14](INTERIM_DECISIONS.md); geometry stays ns. **B:** drop axis-wide cycles mode; show real `*_total_cycles` only in detail/aside. **C:** producer adds per-event cycle timestamps (`start_cycles`/`end_cycles` or cycle-tick `ts`/`dur`). Why open: embeds have block `aic`/`aiv_total_cycles` only — no event cycle positions for axis/gaps/measure. Same ask: [HQ 38](HQ_OPEN_QUESTIONS.md). Specs when answered: METRICS_AND_TRACE, VIEW_DATA_REQUIREMENTS, FEATURE_MATRIX, format-time / INTERACTIONS. |
 
 ---
 
@@ -90,3 +91,4 @@ Producer **format/data specification is still forthcoming**. Product has answere
 | Q16–Q19 | 2026-07-31 | Engineering proposals filed | PACKAGING_SUGGESTIONS |
 | Interim set | 2026-07-31 | I-Q2, I-Q4, I-Q6a/b, I-Q5+, I-Q14, I-Q16–19 for MVP code | INTERIM_DECISIONS |
 | Q20 | 2026-08-12 | Shared agent rules in AGENTS.md (+ nested spec guides); Cursor-only review auto-post; skills in `.agents/skills/` | AGENTS.md, CLAUDE.md |
+| Q23 opened | 2026-08-26 | Timeline clocks true vs derived; interim = I-Q14 option A | I-Q14, HQ 38 |

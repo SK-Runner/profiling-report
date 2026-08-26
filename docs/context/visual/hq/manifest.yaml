@@ -276,3 +276,10 @@ images:
     highlights:
       - label: "Q37 search rows"
         box: { x: 40, y: 220, w: 1990, h: 1840 }
+
+  q38:
+    source_file: src/ui/ReportToolbar/visual/display-control.png
+    maxWidth: 900
+    highlights:
+      - label: "Q38 任务显示单位"
+        box: { x: 24, y: 88, w: 427, h: 120 }
