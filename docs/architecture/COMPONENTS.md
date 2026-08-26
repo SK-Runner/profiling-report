@@ -218,7 +218,7 @@ Renders `OverviewSeries` (Cube/Vector); **hidden** when empty.
 
 ### `SwimlaneCanvas` (M / M2)
 
-Mounts `SwimlaneRenderer`, maps pointer events to `hitTest`, updates hover/selection in view state. **M2:** when `measureMode`, drag sets `measureRange`; draws shaded band + Δt; pan-drag suppressed.
+Mounts `SwimlaneRenderer`, maps pointer events to `hitTest`, updates hover/selection in view state. Unmodified drag marquees a multi-selection; pan is Shift+wheel / horizontal trackpad scroll. **M2:** when `measureMode`, drag sets `measureRange` instead of marqueeing; draws shaded band + Δt.
 
 **Why:** Thin Vue wrapper over imperative rendering — keeps LOD/WebGL out of the Vue reactivity graph.
 
