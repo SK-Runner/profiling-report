@@ -12,6 +12,7 @@ import {
 import DetailSummary from './DetailSummary/DetailSummary.vue';
 import DetailParameter from './DetailParameter/DetailParameter.vue';
 import DetailRelevant from './DetailRelevant/DetailRelevant.vue';
+import CloseButton from '../CloseButton.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -89,16 +90,12 @@ function onResizePointerUp() {
     />
     <header class="pr-detail-panel__head">
       <span class="pr-detail-panel__tab">{{ t('details', locale) }}</span>
-      <button
-        type="button"
+      <CloseButton
         class="pr-detail-panel__close"
         data-testid="detail-panel-close"
-        :aria-label="t('closePanel', locale)"
-        :title="t('closePanel', locale)"
+        :label="t('closePanel', locale)"
         @click="emit('close')"
-      >
-        ×
-      </button>
+      />
     </header>
 
     <div
@@ -178,16 +175,9 @@ function onResizePointerUp() {
 }
 
 .pr-detail-panel__close {
-  border: 0;
-  background: transparent;
-  color: #b0b0b0;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.pr-detail-panel__close:hover {
-  color: #f0f0f0;
+  /* Cancel the head's 8px top / 0 bottom padding, which the tab owns so its
+     underline meets the bottom border — otherwise the ✕ rides 4px low. */
+  margin-bottom: 8px;
 }
 
 .pr-detail-panel__body {

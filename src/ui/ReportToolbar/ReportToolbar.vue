@@ -3,6 +3,7 @@ import { computed, nextTick, ref, useId, watch } from 'vue';
 import type { TimeDisplayUnit, ReportOperator } from '../../domain/types';
 import { MAX_DEPENDENCY_DEPTH, normalizeDependencyDepth } from '../../domain/types';
 import { t } from '../../i18n';
+import CloseButton from '../CloseButton.vue';
 
 const props = defineProps<{
   searchQuery: string;
@@ -520,15 +521,11 @@ function onOptionKeydown(e: KeyboardEvent, id: string) {
         >
           <div class="pr-toolbar__display-head">
             <span class="pr-toolbar__display-title">{{ t('displayControl', locale) }}</span>
-            <button
-              type="button"
-              class="pr-toolbar__display-close"
+            <CloseButton
               data-testid="display-control-close"
-              :title="t('closePanel', locale)"
+              :label="t('closePanel', locale)"
               @click="closeDisplayControl"
-            >
-              ×
-            </button>
+            />
           </div>
           <label class="pr-toolbar__display-field">
             <span class="pr-toolbar__display-label">{{ t('taskDisplayUnit', locale) }}</span>
@@ -922,23 +919,6 @@ function onOptionKeydown(e: KeyboardEvent, id: string) {
   font-weight: 600;
   color: #ffffff;
   line-height: 1.2;
-}
-
-.pr-toolbar__display-close {
-  appearance: none;
-  margin: 0;
-  padding: 0 2px;
-  border: 0;
-  background: transparent;
-  color: #e6e6e6;
-  font-size: 18px;
-  font-weight: 300;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.pr-toolbar__display-close:hover {
-  color: #ffffff;
 }
 
 .pr-toolbar__display-field {

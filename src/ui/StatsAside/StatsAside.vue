@@ -12,6 +12,7 @@ import CsvFieldListPanel from './CsvFieldListPanel/CsvFieldListPanel.vue';
 import HardwareDetailsPanel from './HardwareDetailsPanel/HardwareDetailsPanel.vue';
 import RooflinePanel from './RooflinePanel/RooflinePanel.vue';
 import MemoryTopologyPanel from './MemoryTopologyPanel/MemoryTopologyPanel.vue';
+import CloseButton from '../CloseButton.vue';
 
 const props = defineProps<{
   report: ReportViewModel | null | undefined;
@@ -251,16 +252,11 @@ function backToReport() {
           />
         </svg>
         <h3>{{ headerTitle }}</h3>
-        <button
-          type="button"
-          class="pr-aside__close"
+        <CloseButton
           data-testid="stats-aside-close"
-          :aria-label="t('closePanel', locale)"
-          :title="t('closePanel', locale)"
+          :label="t('closePanel', locale)"
           @click="emit('close')"
-        >
-          ×
-        </button>
+        />
       </div>
       <p
         v-if="asideSurface === 'report' && (hasMeta || showMore)"
@@ -634,21 +630,6 @@ function backToReport() {
 }
 
 .pr-aside__back:hover {
-  color: #ffffff;
-}
-
-.pr-aside__close {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: #e6e6e6;
-  font-size: 16px;
-  line-height: 1;
-  padding: 0 2px;
-  cursor: pointer;
-}
-
-.pr-aside__close:hover {
   color: #ffffff;
 }
 
