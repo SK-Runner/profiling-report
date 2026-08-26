@@ -35,10 +35,16 @@ const props = withDefaults(
     dependencyDepth?: number;
     /** Force backend for perf A/B. Default auto prefers WebGL2 when available. */
     preferRenderer?: 'auto' | 'webgl' | 'canvas';
+    /** Shared playhead x from parent (axis hover + canvas); drives the swim vertical bar. */
+    cursorXRatio?: number | null;
+    /** Gray the swim vertical bar while magnetized to an event edge. */
+    cursorSnapped?: boolean;
   }>(),
   {
     dependencyMode: 'all',
     dependencyDepth: DEFAULT_DEPENDENCY_DEPTH,
+    cursorXRatio: null,
+    cursorSnapped: false,
   },
 );
 
@@ -189,8 +195,8 @@ function applyViewState(forceModel = false): void {
 /**
  * Keep blue event-edge marks aligned with setView during Δt-focus / zoom.
  * Matching events are scanned once per settled measureRange+layout; each frame only re-projects x/y.
- * Skip the scan while a range tween or freeform create-drag is in flight — mid values are floats
- * that cannot hit exact edges (wasteful full scans); refresh on settle in onDone / create end.
+ * A range tween skips the scan (interpolating bounds cannot hit exact edges). A freeform
+ * create-drag keeps the fixed anchor (start) border marker visible instead of clearing.
  */
 function refreshMeasureExactEdgeMarks(forceRescan = false): void {
   if (!props.measureMode || !props.measureRange || !props.model) {
@@ -199,9 +205,14 @@ function refreshMeasureExactEdgeMarks(forceRescan = false): void {
     measureExactEdgeMarks.value = [];
     return;
   }
-  // Range is moving — hide marks; do not key/scan on interpolating bounds.
-  if (cancelMeasureSnap != null || measureGestureActive) {
+  // Range tween in flight — interpolating bounds cannot hit exact edges; hide marks.
+  if (cancelMeasureSnap != null) {
     measureExactEdgeMarks.value = [];
+    return;
+  }
+  // Freeform create drag — keep the fixed anchor (start) border marker visible.
+  if (measureGestureActive) {
+    measureExactEdgeMarks.value = exactMarksAtTime(measureAnchorTime);
     return;
   }
   const start = Math.min(props.measureRange.startTime, props.measureRange.endTime);
@@ -246,7 +257,7 @@ function refreshSnapExactEdgeMarks(): void {
     snapExactEdgeMarks.value = [];
     return;
   }
-  const w = wrapRef.value?.clientWidth || 0;
+  const w = syncTrackWidth();
   if (w <= 0) {
     snapExactEdgeMarks.value = [];
     return;
@@ -254,6 +265,24 @@ function refreshSnapExactEdgeMarks(): void {
   const viewportH = wrapRef.value?.clientHeight || 0;
   snapExactEdgeMarks.value = projectExactEdgeMarks(
     snapExactEdgeMatches,
+    {
+      startTime: props.view.startTime,
+      endTime: props.view.endTime,
+      scrollY: props.view.scrollY,
+    },
+    w,
+    viewportH > 0 ? viewportH : Infinity,
+  );
+}
+
+/** Project exact-match event-edge marks at one time point (null → none). */
+function exactMarksAtTime(time: number | null) {
+  if (time == null) return [];
+  const w = syncTrackWidth();
+  if (w <= 0) return [];
+  const viewportH = wrapRef.value?.clientHeight || 0;
+  return projectExactEdgeMarks(
+    findExactEdgeMatchesAt(backend.getLayout(), time),
     {
       startTime: props.view.startTime,
       endTime: props.view.endTime,
@@ -995,6 +1024,13 @@ defineExpose({
       @pointerleave="onPointerLeave"
       @wheel="onWheel"
     />
+    <div
+      v-if="cursorXRatio != null"
+      class="pr-swim-cursor"
+      :class="{ 'pr-swim-cursor--snapped': cursorSnapped }"
+      data-testid="swim-cursor"
+      :style="{ left: `${cursorXRatio * 100}%` }"
+    />
     <template v-if="measureMode && measureFadeGeometry">
       <div
         class="pr-measure-fade pr-measure-fade--left"
@@ -1165,6 +1201,22 @@ defineExpose({
   pointer-events: none;
   cursor: default;
   z-index: 2;
+}
+
+/* Full-height playhead bar — above event canvas, below blue edge marks. */
+.pr-swim-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #317af7;
+  transform: translateX(-0.5px);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.pr-swim-cursor--snapped {
+  background: #4c4c4c;
 }
 
 /* Event-edge marks: 2px snap + committed exact-match bars (full lane height). */

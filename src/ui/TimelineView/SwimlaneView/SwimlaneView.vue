@@ -251,21 +251,6 @@ defineExpose({
       @scroll="onGutterScroll"
       @toggle-group="emit('toggle-group', $event)"
     />
-    <!-- Under Card strips so the bar does not paint over header chrome. -->
-    <div
-      class="pr-swim-cursor-layer"
-      data-testid="swim-cursor-layer"
-      aria-hidden="true"
-    >
-      <div
-        v-if="cursorXRatio != null"
-        class="pr-swim-cursor"
-        :class="{ 'pr-swim-cursor--snapped': cursorSnapped }"
-        data-testid="swim-cursor"
-        :style="{ left: `${cursorXRatio * 100}%` }"
-      />
-    </div>
-
     <SwimlaneCanvas
       ref="canvasRef"
       :model="model"
@@ -279,6 +264,8 @@ defineExpose({
       :dependency-mode="dependencyMode"
       :dependency-depth="dependencyDepth"
       :prefer-renderer="preferRenderer ?? 'auto'"
+      :cursor-x-ratio="cursorXRatio"
+      :cursor-snapped="cursorSnapped"
       @select="emit('select', $event)"
       @hover="(ev, x, y) => emit('hover', ev, x, y)"
       @cursor="onCursor"
@@ -377,31 +364,6 @@ defineExpose({
   pointer-events: none;
   z-index: 8;
   overflow: hidden;
-}
-
-/* Fill the used track column (not left: var(--pr-gutter-width)). */
-.pr-swim-cursor-layer {
-  grid-column: 2;
-  grid-row: 1;
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  /* Under Card strips (z-index 8) so the bar does not paint over header chrome. */
-  z-index: 7;
-  overflow: hidden;
-}
-
-.pr-swim-cursor {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: #317af7;
-  transform: translateX(-0.5px);
-}
-
-.pr-swim-cursor--snapped {
-  background: #4c4c4c;
 }
 
 .pr-card-strip {

@@ -608,6 +608,9 @@ describe('SwimlaneCanvas', () => {
     const hover = wrapper.emitted('hover')!.at(-1)![0] as { id: string } | null;
     expect(hover?.id).toBe('e1');
 
+    const src = (await import('./SwimlaneCanvas.vue?raw')).default as string;
+    expect(src).toMatch(/\.pr-measure-edge-mark--snap\s*\{[^}]*width:\s*2px/);
+
     await canvas.trigger('pointerdown', { clientX: rect.x - 5, clientY: y, pointerId: 1 });
     await canvas.trigger('pointerup', { clientX: rect.x - 5, clientY: y, pointerId: 1 });
     const selected = wrapper.emitted('select')!.at(-1)![0] as { id: string } | null;
@@ -786,5 +789,34 @@ describe('SwimlaneCanvas', () => {
     expect(src).toMatch(/measureFadeGeometry = computed\(\(\) => \{\s*void resizeTick\.value/s);
     expect(src).toMatch(/measureGeometry = computed\(\(\) => \{\s*void resizeTick\.value/s);
     expect(src).toMatch(/measurePreviewGeometry = computed\(\(\) => \{\s*void resizeTick\.value/s);
+  });
+
+  it('PR-CANVAS-027: freeform create keeps the anchor border marker during drag', async () => {
+    const { wrapper, canvas } = await mountWithEventModel();
+    const vm = wrapper.vm as { eventScreenRect: (id: string) => { x: number; y: number; w: number; h: number } | null };
+    const rect = vm.eventScreenRect('e1')!;
+    const y = rect.y + rect.h / 2;
+    // Press on the event start edge → the anchor magnetizes to 200.
+    await canvas.trigger('pointerdown', { clientX: rect.x, clientY: y, pointerId: 1 });
+    // Drag right past the threshold; the moving edge is free (inside the block).
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.x + 60, clientY: y, buttons: 1 }),
+    );
+    // Reflect the in-flight range as the parent would, driving the measureRange watcher.
+    await wrapper.setProps({ measureRange: { startTime: 200, endTime: 350 } });
+
+    // The anchor (start) border marker must stay visible while the drag is active.
+    const marks = wrapper.findAll('[data-testid="measure-edge-exact"]');
+    expect(marks.length).toBeGreaterThan(0);
+
+    window.dispatchEvent(new PointerEvent('pointerup', { clientX: rect.x + 60, clientY: y }));
+    wrapper.unmount();
+  });
+
+  it('PR-CANVAS-028: blue edge marks stack above the swim playhead stem', async () => {
+    const src = (await import('./SwimlaneCanvas.vue?raw')).default as string;
+    expect(src).toMatch(/\.pr-swim-cursor\s*\{[^}]*z-index:\s*3/);
+    expect(src).toMatch(/\.pr-measure-edge-mark\s*\{[^}]*z-index:\s*4/);
+    expect(src).toMatch(/\.pr-measure-edge-mark--snap\s*\{[^}]*z-index:\s*5/);
   });
 });
