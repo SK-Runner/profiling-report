@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import CloseButton from '../CloseButton.vue';
+import SortArrows from '../SortArrows.vue';
 import { formatTimeParts } from '../../domain/formatTime';
 import { collectLeafEventsFromModel } from '../../domain/swimTree';
 import type { SwimEvent, SwimlaneModel, TimeDisplayUnit } from '../../domain/types';
@@ -208,10 +209,7 @@ function onResizePointerUp() {
                 @click="toggleSort('name')"
               >
                 {{ t('name', locale) }}
-                <span
-                  class="pr-multi-select__sort-icon"
-                  aria-hidden="true"
-                >◇</span>
+                <SortArrows />
               </button>
             </th>
             <th
@@ -228,10 +226,7 @@ function onResizePointerUp() {
                 @click="toggleSort(col.key)"
               >
                 {{ t(col.label, locale) }}
-                <span
-                  class="pr-multi-select__sort-icon"
-                  aria-hidden="true"
-                >◇</span>
+                <SortArrows />
               </button>
             </th>
           </tr>
@@ -376,11 +371,11 @@ function onResizePointerUp() {
 .pr-multi-select__sort {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 9px;
   padding: 8px 8px 8px 0;
   border: 0;
   background: transparent;
-  color: #a0a0a0;
+  color: #999999;
   font: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -390,13 +385,11 @@ function onResizePointerUp() {
   color: #e0e0e0;
 }
 
+/* The sketch's arrows are identical on every column, so the sorted column is
+   marked by its label brightening — not by a different glyph. */
 .pr-multi-select__sort[aria-sort='ascending'],
 .pr-multi-select__sort[aria-sort='descending'] {
   color: #e8e8e8;
-}
-
-.pr-multi-select__sort-icon {
-  font-size: 10px;
 }
 
 .pr-multi-select__name {
