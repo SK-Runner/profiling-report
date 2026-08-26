@@ -40,12 +40,12 @@ Legend: **M** = MVP must-have · **P2** = Phase 2+ · **H** = host (MSTT) respon
 | Uniform event-sequence lane background + horizontal row dividers | M | No zebra striping; gutter↔timeline continuous `#3a3a3a` lines ([UI_OVERVIEW](UI_OVERVIEW.md)) |
 | Colored event rectangles | M | Normative colors [COLOR_TOKENS](COLOR_TOKENS.md) |
 | Event labels when wide enough | M | Vertically centered in block; horizontally centered in visible (clipped) event rect |
-| Zoom / pan (wheel, drag, slider) | M | See [INTERACTIONS](INTERACTIONS.md); W/S/A/D → P2 ([PACKAGING_SUGGESTIONS](../context/PACKAGING_SUGGESTIONS.md)) |
+| Zoom / pan (wheel, Shift+wheel, slider) | M | Drag on the swimlane multi-selects, not pans. See [INTERACTIONS](INTERACTIONS.md); W/S/A/D → P2 ([PACKAGING_SUGGESTIONS](../context/PACKAGING_SUGGESTIONS.md)) |
 
 | ProfilerStep background bands | P2 | Needs data |
 | Dependency bezier links | P2 | `source/v930/entry.jpeg` |
 | Pin lane / context menu | P2 | `source/v930/entry.jpeg` |
-| Multi-select time slice summary | P2 | `source/v930/entry.jpeg` |
+| Multi-select time slice summary | P2 | Marquee drag; `source/v930/task-marquee.jpeg` |
 
 ## Interactions (see also INTERACTIONS.md)
 
@@ -53,7 +53,7 @@ Legend: **M** = MVP must-have · **P2** = Phase 2+ · **H** = host (MSTT) respon
 |---------|------:|------------------|
 | Hover tooltip (name, start, dur, end) | M | `source/v930/task-hover.jpeg` |
 | Single select → detail | M | |
-| Multi-select | P2 | |
+| Multi-select | P2 | Unmodified drag marquee + Slices dock + axis Δt — [INTERACTIONS](INTERACTIONS.md) |
 | Context menu | P2 | |
 | Timeline time-range measure (度量模式) | M2 | Replaces prior “Measure / cross-lane rulers” row. See Toolbar + [INTERACTIONS](INTERACTIONS.md). Aside is not recomputed for the measured range. |
 

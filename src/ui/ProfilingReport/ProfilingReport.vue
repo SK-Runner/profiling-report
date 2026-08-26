@@ -7,6 +7,7 @@ import {
   clearSelection,
   createViewState,
   measureFocusWindow,
+  normalizeMeasureRange,
   panBy,
   setMeasureMode,
   setMeasureRange,
@@ -99,6 +100,11 @@ const selected = ref<SelectedEvent | null>(null);
 const selectedEvent = ref<SwimEvent | null>(null);
 /** Marquee capture; mutually exclusive with `selected` (only one dock mounts). */
 const multiSelected = ref<SwimEvent[]>([]);
+/**
+ * Δt span shown on the axis for the marquee: the live drag extent while dragging, then
+ * the committed selection hull. Cleared with the selection.
+ */
+const multiSelectSpan = ref<MeasureRange | null>(null);
 const tooltipStyle = ref({ left: '0px', top: '0px' });
 const localTimeUnit = ref<TimeDisplayUnit>(props.timeUnit ?? 'ms');
 const localDependencyMode = ref<DependencyMode>(props.dependencyMode);
@@ -213,9 +219,7 @@ function animateToWindow(window: { startTime: number; endTime: number; scrollY: 
   });
 }
 
-function onFocusMeasure() {
-  const range = viewState.value.measureRange;
-  if (!range) return;
+function onFocusMeasure(range: MeasureRange) {
   const target = measureFocusWindow(range, bounds.value, viewState.value.scrollY);
   animateToWindow(target);
 }
@@ -235,6 +239,7 @@ function resetViewFromModel(model: SwimlaneModel | null, showAsidePanel: boolean
   selected.value = null;
   selectedEvent.value = null;
   multiSelected.value = [];
+  multiSelectSpan.value = null;
   hovered.value = null;
   resetPanelWidthsToDefaults();
   const fromMeta = model?.metadata?.defaultCollapsedIds;
@@ -347,6 +352,7 @@ function loadFromSource(source: ArrayBuffer | Uint8Array) {
     selected.value = null;
     selectedEvent.value = null;
     multiSelected.value = [];
+    multiSelectSpan.value = null;
     hovered.value = null;
     viewState.value = createViewState(null);
     loadError.value = cause instanceof Error ? cause.message : String(cause);
@@ -454,6 +460,7 @@ watch(
 
 function onSelect(ev: SwimEvent | null) {
   multiSelected.value = [];
+  multiSelectSpan.value = null;
   if (!ev) {
     selected.value = null;
     selectedEvent.value = null;
@@ -477,7 +484,8 @@ function onSelect(ev: SwimEvent | null) {
 
 /**
  * Marquee commit. An empty rect is a clear, which keeps `select(null)` the single
- * "nothing is selected" signal hosts listen for.
+ * "nothing is selected" signal hosts listen for. The axis Δt switches from the live drag
+ * extent to the committed selection hull and persists until the selection clears.
  */
 function onMultiSelect(events: SwimEvent[]) {
   if (events.length === 0) {
@@ -487,11 +495,24 @@ function onMultiSelect(events: SwimEvent[]) {
   selected.value = null;
   selectedEvent.value = null;
   multiSelected.value = events;
+  multiSelectSpan.value = normalizeMeasureRange(
+    Math.min(...events.map((e) => e.startTime)),
+    Math.max(...events.map((e) => e.startTime + e.duration)),
+  );
   viewState.value = setMultiSelection(
     viewState.value,
     events.map((e) => e.id),
   );
   emit('select', null);
+}
+
+/**
+ * Live marquee extent during the drag. The canvas nulls it on pointerup/Escape; on a
+ * commit `onMultiSelect` runs right after and swaps in the hull, so a cancel is the only
+ * path that leaves it cleared.
+ */
+function onMultiSelectSpan(span: MeasureRange | null) {
+  multiSelectSpan.value = span;
 }
 
 function onHover(ev: SwimEvent | null, clientX: number, clientY: number) {
@@ -729,6 +750,7 @@ defineExpose({ selectEventById, viewState, selectedOperatorId });
           :collapsed-ids="collapsedGroupIds"
           :display-swim="displaySwim"
           :cursor="cursor"
+          :multi-select-span="multiSelectSpan"
           :show-overview-charts="showOverview"
           :gutter-width="gutterWidth"
           :prefer-renderer="preferRenderer ?? 'auto'"
@@ -738,6 +760,7 @@ defineExpose({ selectEventById, viewState, selectedOperatorId });
           @toggle-group="onToggleGroup"
           @select="onSelect"
           @multi-select="onMultiSelect"
+          @multi-select-span="onMultiSelectSpan"
           @hover="onHover"
           @cursor="onCursor"
           @set-playhead="onSetPlayhead"
