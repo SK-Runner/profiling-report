@@ -11,7 +11,7 @@ import {
 } from '../../../../domain/types';
 import { normalizeMeasureRange } from '../../../../domain/viewState';
 import { WebGlSwimlaneRenderer } from '../../../../swimlane/WebGlSwimlaneRenderer';
-import { contentHeightFromModel, findExactEdgeMatches, LANE_HEIGHT, nearestEventEdgeAtPoint, projectExactEdgeMarks, type ExactEdgeMatch } from '../../../../swimlane/layout';
+import { contentHeightFromModel, findExactEdgeMatches, findExactEdgeMatchesAt, nearestEventEdgeAtPoint, projectExactEdgeMarks, type ExactEdgeMatch } from '../../../../swimlane/layout';
 import { CanvasSwimlaneRenderer, SwimlaneOverlayPainter } from '../../../../swimlane/CanvasSwimlaneRenderer';
 import {
   bindWindowPointerDrag,
@@ -45,7 +45,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   select: [event: SwimEvent | null];
   hover: [event: SwimEvent | null, clientX: number, clientY: number];
-  cursor: [payload: { time: number; xRatio: number } | null];
+  cursor: [payload: { time: number; xRatio: number; snapped?: boolean } | null];
   pan: [deltaTime: number];
   zoom: [factor: number, anchorTime: number];
   'scroll-y': [scrollY: number];
@@ -93,8 +93,12 @@ const EVENT_EDGE_MAGNET_PX = 10;
 /** Fast snap when clicking an event while a prior measure range exists. */
 const MEASURE_SNAP_DURATION_MS = 180;
 const suppressMeasurePreview = ref(false);
-/** Live magnet highlight on the snapped event edge (block-height blue stem). */
-const edgeSnapHighlight = ref<{ x: number; y: number; h: number } | null>(null);
+/** View-invariant matches for the snapped magnet edge; rescanned on each snap. */
+let snapExactEdgeMatches: ExactEdgeMatch[] = [];
+/** Projected snap marks — blue bars at every event edge exactly equal to the snapped time. */
+const snapExactEdgeMarks = shallowRef<
+  { eventId: string; edge: 'start' | 'end'; time: number; x: number; y: number; h: number }[]
+>([]);
 /** Committed exact-match marks; projected each frame from a cached match set. */
 const measureExactEdgeMarks = shallowRef<
   { eventId: string; edge: 'start' | 'end'; time: number; x: number; y: number; h: number }[]
@@ -155,6 +159,8 @@ function applyViewState(forceModel = false): void {
     cachedExactEdgeMatches = [];
     cachedExactEdgeMatchKey = '';
     measureExactEdgeMarks.value = [];
+    snapExactEdgeMatches = [];
+    snapExactEdgeMarks.value = [];
     return;
   }
   const modelChanged = forceModel || props.model !== attachedModel;
@@ -162,6 +168,7 @@ function applyViewState(forceModel = false): void {
     backend.setModel(props.model);
     attachedModel = props.model;
     cachedExactEdgeMatchKey = ''; // layout identity changed — rescan matches
+    snapExactEdgeMatches = []; // lane Ys may have moved — drop live snap marks
   }
   backend.setView(props.view);
   backend.setDependencyMode?.(props.dependencyMode);
@@ -176,6 +183,7 @@ function applyViewState(forceModel = false): void {
     overlay.setSearchQuery(props.searchQuery);
   }
   refreshMeasureExactEdgeMarks(modelChanged);
+  refreshSnapExactEdgeMarks();
 }
 
 /**
@@ -230,6 +238,30 @@ function refreshMeasureExactEdgeMarks(forceRescan = false): void {
 function sync(forceModel = false): void {
   applyViewState(forceModel);
   schedulePaint();
+}
+
+/** Re-project live magnet snap marks into screen bars for the current view window. */
+function refreshSnapExactEdgeMarks(): void {
+  if (snapExactEdgeMatches.length === 0) {
+    snapExactEdgeMarks.value = [];
+    return;
+  }
+  const w = wrapRef.value?.clientWidth || 0;
+  if (w <= 0) {
+    snapExactEdgeMarks.value = [];
+    return;
+  }
+  const viewportH = wrapRef.value?.clientHeight || 0;
+  snapExactEdgeMarks.value = projectExactEdgeMarks(
+    snapExactEdgeMatches,
+    {
+      startTime: props.view.startTime,
+      endTime: props.view.endTime,
+      scrollY: props.view.scrollY,
+    },
+    w,
+    viewportH > 0 ? viewportH : Infinity,
+  );
 }
 
 function resize(): void {
@@ -330,14 +362,6 @@ watch(
     sync();
   },
   { deep: true },
-);
-
-/** Drop live magnet stem when the time window moves (zoom / pan / Δt focus anim). */
-watch(
-  () => [props.view.startTime, props.view.endTime] as const,
-  () => {
-    edgeSnapHighlight.value = null;
-  },
 );
 
 function cancelMeasureSnapAnim(): void {
@@ -470,6 +494,7 @@ function emitResizedRange(clientX: number, clientY: number) {
   emit('cursor', {
     time: edgeTime,
     xRatio: Math.min(1, Math.max(0, xRatio)),
+    snapped: mag.eventId != null,
   });
 }
 
@@ -481,7 +506,7 @@ function emitCreateRange(clientX: number, clientY: number) {
     ? magnetizeLocal(local.x, local.y)
     : { time: timeAtX(clientX - wrapRef.value.getBoundingClientRect().left), xPx: 0, xRatio: 0, eventId: null };
   emit('update:measureRange', normalizeMeasureRange(measureAnchorTime, mag.time));
-  emit('cursor', { time: mag.time, xRatio: mag.xRatio });
+  emit('cursor', { time: mag.time, xRatio: mag.xRatio, snapped: mag.eventId != null });
 }
 
 /** Snap to event borders; tween from prior range or (if none) from the visible window. */
@@ -670,13 +695,12 @@ function magnetizeLocal(
     EVENT_EDGE_MAGNET_PX,
   );
   if (!hit) {
-    edgeSnapHighlight.value = null;
+    snapExactEdgeMatches = [];
+    snapExactEdgeMarks.value = [];
     return { time: timeAtX(localX), xPx: localX, xRatio: localX / w, eventId: null };
   }
-  const item = backend.getLayout().eventsById.get(hit.eventId);
-  edgeSnapHighlight.value = item
-    ? { x: hit.xPx, y: item.y - props.view.scrollY, h: LANE_HEIGHT }
-    : null;
+  snapExactEdgeMatches = findExactEdgeMatchesAt(backend.getLayout(), hit.time);
+  refreshSnapExactEdgeMarks();
   return { time: hit.time, xPx: hit.xPx, xRatio: hit.xPx / w, eventId: hit.eventId };
 }
 
@@ -701,14 +725,16 @@ function localFromClient(clientX: number, clientY: number): { x: number; y: numb
 function magnetizeAtClient(clientX: number, clientY: number) {
   const local = localFromClient(clientX, clientY);
   if (!local) {
-    edgeSnapHighlight.value = null;
+    snapExactEdgeMatches = [];
+    snapExactEdgeMarks.value = [];
     return null;
   }
   return magnetizeLocal(local.x, local.y);
 }
 
 function clearEdgeSnapHighlight() {
-  edgeSnapHighlight.value = null;
+  snapExactEdgeMatches = [];
+  snapExactEdgeMarks.value = [];
 }
 
 /** Fade bands outside the visible selection (persists when range is fully off-screen). */
@@ -823,7 +849,7 @@ function onPointerMove(e: PointerEvent): void {
 
   schedulePaint();
   const mag = magnetizeLocal(x, y);
-  emit('cursor', { time: mag.time, xRatio: mag.xRatio });
+  emit('cursor', { time: mag.time, xRatio: mag.xRatio, snapped: mag.eventId != null });
 
   if (dragging) {
     // Measure create is driven by window listeners (release over Card strips still ends).
@@ -881,7 +907,8 @@ function onPointerLeave(e: PointerEvent): void {
   // Keep measure drag alive under pointer capture; clear anchor only on pointerup / cancel.
   if (measureGestureActive || measureCreatePending || measurePressActive) {
     schedulePaint();
-    edgeSnapHighlight.value = null;
+    snapExactEdgeMatches = [];
+    snapExactEdgeMarks.value = [];
     emit('cursor', null);
     emit('hover', null, 0, 0);
     return;
@@ -894,7 +921,8 @@ function onPointerLeave(e: PointerEvent): void {
   }
   dragging = false;
   measureAnchorTime = null;
-  edgeSnapHighlight.value = null;
+  snapExactEdgeMatches = [];
+  snapExactEdgeMarks.value = [];
   schedulePaint();
   emit('cursor', null);
   emit('hover', null, 0, 0);
@@ -1016,13 +1044,14 @@ defineExpose({
       />
     </template>
     <div
-      v-if="edgeSnapHighlight"
+      v-for="(mark, i) in snapExactEdgeMarks"
+      :key="`snap-${mark.eventId}-${mark.edge}-${i}`"
       class="pr-measure-edge-mark pr-measure-edge-mark--snap"
       data-testid="measure-edge-snap"
       :style="{
-        left: `${edgeSnapHighlight.x}px`,
-        top: `${edgeSnapHighlight.y}px`,
-        height: `${edgeSnapHighlight.h}px`,
+        left: `${mark.x}px`,
+        top: `${mark.y}px`,
+        height: `${mark.h}px`,
       }"
     />
     <div
@@ -1138,7 +1167,7 @@ defineExpose({
   z-index: 2;
 }
 
-/* Event-edge marks: 1px live snap stem; 2px committed exact-match (full lane height). */
+/* Event-edge marks: 2px snap + committed exact-match bars (full lane height). */
 .pr-measure-edge-mark {
   position: absolute;
   width: 1px;
@@ -1153,6 +1182,7 @@ defineExpose({
 }
 
 .pr-measure-edge-mark--snap {
+  width: 2px;
   z-index: 5;
 }
 </style>

@@ -601,8 +601,9 @@ describe('SwimlaneCanvas', () => {
       clientY: y,
       pointerId: 1,
     });
-    const last = wrapper.emitted('cursor')!.at(-1)![0] as { time: number; xRatio: number };
+    const last = wrapper.emitted('cursor')!.at(-1)![0] as { time: number; xRatio: number; snapped?: boolean };
     expect(last.time).toBe(200);
+    expect(last.snapped).toBe(true);
     expect(wrapper.find('[data-testid="measure-edge-snap"]').exists()).toBe(true);
     const hover = wrapper.emitted('hover')!.at(-1)![0] as { id: string } | null;
     expect(hover?.id).toBe('e1');
@@ -621,8 +622,9 @@ describe('SwimlaneCanvas', () => {
     const y = rect.y + rect.h / 2;
     const x = rect.x + rect.w / 2; // mid-block, far from both edges on 400px view
     await canvas.trigger('pointermove', { clientX: x, clientY: y, pointerId: 1 });
-    const last = wrapper.emitted('cursor')!.at(-1)![0] as { time: number };
+    const last = wrapper.emitted('cursor')!.at(-1)![0] as { time: number; snapped?: boolean };
     expect(last.time).toBeCloseTo((x / 400) * 1000, 5);
+    expect(last.snapped).toBe(false);
     expect(wrapper.find('[data-testid="measure-edge-snap"]').exists()).toBe(false);
     wrapper.unmount();
   });

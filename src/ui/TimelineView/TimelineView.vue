@@ -42,7 +42,7 @@ const props = withDefaults(
     groups: GutterGroup[];
     collapsedIds: string[];
     displaySwim: SwimlaneModel | null;
-    cursor: { time: number; xRatio: number } | null;
+    cursor: { time: number; xRatio: number; snapped?: boolean } | null;
     showOverviewCharts?: boolean;
     gutterWidth?: number;
     preferRenderer?: 'auto' | 'webgl' | 'canvas';
@@ -60,7 +60,7 @@ const emit = defineEmits<{
   'toggle-group': [groupId: string];
   select: [event: SwimEvent | null];
   hover: [event: SwimEvent | null, clientX: number, clientY: number];
-  cursor: [payload: { time: number; xRatio: number } | null];
+  cursor: [payload: { time: number; xRatio: number; snapped?: boolean } | null];
   pan: [deltaTime: number];
   zoom: [factor: number, anchorTime: number];
   'set-playhead': [time: number];
@@ -528,6 +528,7 @@ defineExpose({
           :x-ratio="cursor.xRatio"
           :label="formatDisplayTime(cursor.time, bounds.minTime, unit)"
           :label-above="cursorLabelAbove"
+          :snapped="cursor.snapped ?? false"
         />
         <template v-if="measureAxis">
           <div
@@ -660,6 +661,7 @@ defineExpose({
       :prefer-renderer="preferRenderer ?? 'auto'"
       :gutter-width="localGutterWidth"
       :cursor-x-ratio="cursor?.xRatio ?? null"
+      :cursor-snapped="cursor?.snapped ?? false"
       @update:scroll-y="emit('update:scrollY', $event)"
       @update:gutter-width="onGutterWidth"
       @toggle-group="emit('toggle-group', $event)"

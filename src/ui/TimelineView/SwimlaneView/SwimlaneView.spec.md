@@ -28,8 +28,10 @@ Body row: LaneGutter | SwimlaneCanvas with shared Y scroll sync, body-local gutt
 6. **PR-SWIMVIEW-006** — Card strip fill/hover use `LANE_GROUP_HEADER_FILL` / `LANE_GROUP_HEADER_HOVER` CSS vars (no hardcoded `rgb(42…)` / `rgb(50…)`).
 7. **PR-SWIMVIEW-007** — Parent `cursorXRatio` prop drives the swim cursor bar (axis hover / shared playhead).
 8. **PR-SWIMVIEW-008** — Gutter resize handle and swim cursor layer are pinned to used grid columns; track column uses `minmax(80px, 1fr)`.
+9. **PR-SWIMVIEW-009** — When the cursor is magnetized (`cursorSnapped`), the swim vertical bar renders gray (`.pr-swim-cursor--snapped`).
 
 ## Changelog
+- **2026-08-26** — `cursorSnapped` grays the swim vertical bar when the cursor is magnetized to an event edge; PR-SWIMVIEW-009.
 - **2026-08-25** — Pin overlays to used grid columns; track `minmax(80px, 1fr)`; PR-SWIMVIEW-008.
 - **2026-08-20** — Swim cursor follows parent `cursorXRatio`; PR-SWIMVIEW-007.
 - **2026-08-20** — Body `overflow: hidden` while main column stays visible for aside-seam chrome.

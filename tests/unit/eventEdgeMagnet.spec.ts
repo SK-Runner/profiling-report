@@ -3,6 +3,7 @@ import {
   LANE_GROUP_HEADER_HEIGHT,
   LANE_HEIGHT,
   findExactEdgeMatches,
+  findExactEdgeMatchesAt,
   measureRangeExactEdgeMarks,
   nearestEventEdgeAtPoint,
   projectExactEdgeMarks,
@@ -107,5 +108,17 @@ describe('nearestEventEdgeAtPoint / measureRangeExactEdgeMarks', () => {
     );
     expect(wide.find((m) => m.eventId === 'e-long' && m.edge === 'start')!.x).toBe(100);
     expect(zoomed.find((m) => m.eventId === 'e-long' && m.edge === 'start')!.x).toBe(200);
+  });
+
+  it('findExactEdgeMatchesAt returns every edge sharing one time point', () => {
+    const layout = rebuildLayout(model());
+    const starts = findExactEdgeMatchesAt(layout, 100);
+    expect(starts.map((m) => `${m.eventId}:${m.edge}`).sort()).toEqual([
+      'e-long:start',
+      'e-short:start',
+    ]);
+    const ends = findExactEdgeMatchesAt(layout, 500);
+    expect(ends.map((m) => `${m.eventId}:${m.edge}`)).toEqual(['e-long:end']);
+    expect(findExactEdgeMatchesAt(layout, 123)).toEqual([]);
   });
 });

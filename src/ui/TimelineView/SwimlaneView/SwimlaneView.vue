@@ -43,11 +43,14 @@ const props = withDefaults(
     gutterWidth?: number;
     /** Shared playhead x from parent (axis hover + canvas); drives the swim vertical bar. */
     cursorXRatio?: number | null;
+    /** True when the cursor is magnetized to an event edge (gray the swim vertical bar). */
+    cursorSnapped?: boolean;
   }>(),
   {
     dependencyMode: 'all',
     dependencyDepth: DEFAULT_DEPENDENCY_DEPTH,
     cursorXRatio: null,
+    cursorSnapped: false,
   },
 );
 
@@ -57,7 +60,7 @@ const emit = defineEmits<{
   'toggle-group': [groupId: string];
   select: [event: SwimEvent | null];
   hover: [event: SwimEvent | null, clientX: number, clientY: number];
-  cursor: [payload: { time: number; xRatio: number } | null];
+  cursor: [payload: { time: number; xRatio: number; snapped?: boolean } | null];
   pan: [deltaTime: number];
   zoom: [factor: number, anchorTime: number];
   'set-playhead': [time: number];
@@ -79,11 +82,20 @@ const bodyViewportH = ref(0);
 const localGutterWidth = ref(props.gutterWidth ?? GUTTER_WIDTH_DEFAULT);
 /** Swimlane mouse-follow bar; synced from canvas emits and parent `cursorXRatio` (axis hover). */
 const cursorXRatio = ref<number | null>(props.cursorXRatio ?? null);
+/** Gray the swim vertical bar while the cursor is magnetized to an event edge. */
+const cursorSnapped = ref(props.cursorSnapped ?? false);
 
 watch(
   () => props.cursorXRatio,
   (v) => {
     cursorXRatio.value = v ?? null;
+  },
+);
+
+watch(
+  () => props.cursorSnapped,
+  (v) => {
+    cursorSnapped.value = v ?? false;
   },
 );
 
@@ -186,15 +198,17 @@ function onGutterResizePointerUp() {
   gutterResizeSession = null;
 }
 
-function onCursor(payload: { time: number; xRatio: number } | null) {
+function onCursor(payload: { time: number; xRatio: number; snapped?: boolean } | null) {
   cursorXRatio.value = payload?.xRatio ?? null;
+  cursorSnapped.value = payload?.snapped ?? false;
   emit('cursor', payload);
 }
 
 /** Strips own the header hit target; clear immediately (do not wait for canvas leave). */
 function clearCursor() {
-  if (cursorXRatio.value == null) return;
+  if (cursorXRatio.value == null && !cursorSnapped.value) return;
   cursorXRatio.value = null;
+  cursorSnapped.value = false;
   emit('cursor', null);
 }
 
@@ -246,6 +260,7 @@ defineExpose({
       <div
         v-if="cursorXRatio != null"
         class="pr-swim-cursor"
+        :class="{ 'pr-swim-cursor--snapped': cursorSnapped }"
         data-testid="swim-cursor"
         :style="{ left: `${cursorXRatio * 100}%` }"
       />
@@ -383,6 +398,10 @@ defineExpose({
   width: 1px;
   background: #317af7;
   transform: translateX(-0.5px);
+}
+
+.pr-swim-cursor--snapped {
+  background: #4c4c4c;
 }
 
 .pr-card-strip {
