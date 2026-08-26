@@ -320,6 +320,7 @@ function endMeasureCreate() {
 function emitResizedRange(clientX: number, clientY: number) {
   if (!resizeEdge) return;
   const axisW = timeAxisWidth.value || timeAxisRef.value?.clientWidth || 1;
+  const mag = swimlaneRef.value?.magnetizeAtClient?.(clientX, clientY);
   const { time } = pointerTimeAtClient(clientX, clientY);
   const next = resizeMeasureEdge({
     edge: resizeEdge,
@@ -336,6 +337,7 @@ function emitResizedRange(clientX: number, clientY: number) {
   emit('cursor', {
     time: edgeTime,
     xRatio: Math.min(1, Math.max(0, xRatio)),
+    snapped: mag?.eventId != null,
   });
 }
 

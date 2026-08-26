@@ -819,4 +819,25 @@ describe('SwimlaneCanvas', () => {
     expect(src).toMatch(/\.pr-measure-edge-mark\s*\{[^}]*z-index:\s*4/);
     expect(src).toMatch(/\.pr-measure-edge-mark--snap\s*\{[^}]*z-index:\s*5/);
   });
+
+  it('PR-CANVAS-029: resize drag off an event emits unsnapped cursor', async () => {
+    const { wrapper } = await mountWithEventModel({
+      measureRange: { startTime: 200, endTime: 500 },
+    });
+    const right = wrapper.get('[data-testid="measure-border-right"]');
+    await right.trigger('pointerdown', { clientX: 200, clientY: 60, pointerId: 1, button: 0 });
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: 320, clientY: 60, buttons: 1 }),
+    );
+
+    const last = wrapper.emitted('cursor')!.at(-1)![0] as { snapped?: boolean };
+    expect(last.snapped).toBe(false);
+    expect(right.classes()).toContain('pr-measure-border--dragging');
+
+    const src = (await import('./SwimlaneCanvas.vue?raw')).default as string;
+    expect(src).toMatch(/\.pr-measure-border--dragging::before\s*\{[^}]*display:\s*none/);
+
+    window.dispatchEvent(new PointerEvent('pointerup', { clientX: 320, clientY: 60 }));
+    wrapper.unmount();
+  });
 });

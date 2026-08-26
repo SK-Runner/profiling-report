@@ -58,6 +58,7 @@ Seven interaction events: **select** fires with a `SwimEvent` (or null) on click
 26. **PR-CANVAS-026** — Measure overlay geometry recomputes when the wrap width changes (resizeTick).
 27. **PR-CANVAS-027** — During a freeform create drag, the fixed anchor (start) border keeps its 2px blue `measure-edge-exact` marker (the moving edge is not marked until it settles).
 28. **PR-CANVAS-028** — Blue `measure-edge-snap` / `measure-edge-exact` marks stack above the swim playhead stem (`.pr-swim-cursor`, `z-index: 3`).
+29. **PR-CANVAS-029** — While resizing a measure border, the gray border stem hides and the full-height playhead is **blue** when the edge is not magnetized to an event (`snapped: false`); gray when magnetized.
 
 ## Edge Cases
 
@@ -90,6 +91,7 @@ Crops: [`visual/event-blocks.png`](./visual/event-blocks.png), [`visual/search-h
 **Input formats:** [METRICS_AND_TRACE.md](../../../../../docs/formats/METRICS_AND_TRACE.md) (trace.json Chrome Trace events).
 
 ## Changelog
+- **2026-08-26** — Measure-border resize drag: unsnapped edge uses blue playhead; gray border stem hidden during drag; PR-CANVAS-029.
 - **2026-08-26** — Freeform create drag keeps the anchor (start) border marker visible; PR-CANVAS-027.
 - **2026-08-26** — Magnet snap paints multi-lane 2px blue bars at matching edges; `cursor` emits `snapped` to gray the full-height swim/axis line (PR-CANVAS-018).
 - **2026-08-25** — Measure-mode event click also selects the event; empty-space click also clears the selection (PR-CANVAS-013/014/015/016).

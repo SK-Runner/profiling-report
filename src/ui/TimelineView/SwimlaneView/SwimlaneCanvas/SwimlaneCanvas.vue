@@ -114,6 +114,8 @@ let cachedExactEdgeMatches: ExactEdgeMatch[] = [];
 let cachedExactEdgeMatchKey = '';
 let cancelMeasureSnap: (() => void) | null = null;
 let resizeEdge: MeasureResizeEdge | null = null;
+/** Active measure-border resize — hides gray stem so playhead owns the full-height line. */
+const resizingBorder = ref<{ edge: MeasureResizeEdge; snapped: boolean } | null>(null);
 /** Which measure border currently owns the pointer (for stuck cursor + zoom anchor). */
 let hoveredMeasureEdge: MeasureResizeEdge | null = null;
 let resizeFixedOther = 0;
@@ -440,6 +442,7 @@ function endMeasureResize(): void {
   unbindResizeDrag?.();
   unbindResizeDrag = null;
   resizeEdge = null;
+  resizingBorder.value = null;
   suppressMeasurePreview.value = false;
 }
 
@@ -520,10 +523,12 @@ function emitResizedRange(clientX: number, clientY: number) {
   const edgeTime = resizeEdge === 'left' ? next.startTime : next.endTime;
   const span = Math.max(1, props.view.endTime - props.view.startTime);
   const xRatio = (edgeTime - props.view.startTime) / span;
+  const snapped = mag.eventId != null;
+  resizingBorder.value = { edge: resizeEdge, snapped };
   emit('cursor', {
     time: edgeTime,
     xRatio: Math.min(1, Math.max(0, xRatio)),
-    snapped: mag.eventId != null,
+    snapped,
   });
 }
 
@@ -590,8 +595,13 @@ function clearMeasureRange(): void {
   runMeasureRangeTween(from, to, { suppressDt: true, clearWhenDone: true });
 }
 
+/** True when a time exactly matches a visible event start/end. */
+function isTimeOnEventEdge(time: number): boolean {
+  return findExactEdgeMatchesAt(backend.getLayout(), time).length > 0;
+}
+
 /** Stick playhead cursor to a measure edge while the hit pad owns the pointer. */
-function emitCursorAtMeasureEdge(edge: MeasureResizeEdge) {
+function emitCursorAtMeasureEdge(edge: MeasureResizeEdge, snapped?: boolean) {
   const geo = measureGeometry.value;
   const range = props.measureRange;
   if (!geo || !range || !wrapRef.value) return;
@@ -599,11 +609,14 @@ function emitCursorAtMeasureEdge(edge: MeasureResizeEdge) {
   const start = Math.min(range.startTime, range.endTime);
   const end = Math.max(range.startTime, range.endTime);
   const x = edge === 'left' ? geo.left : geo.right;
-  emit('cursor', {
-    time: edge === 'left'
+  const time =
+    edge === 'left'
       ? Math.max(props.view.startTime, start)
-      : Math.min(props.view.endTime, end),
+      : Math.min(props.view.endTime, end);
+  emit('cursor', {
+    time,
     xRatio: x / w,
+    ...(snapped !== undefined ? { snapped } : {}),
   });
 }
 
@@ -636,7 +649,10 @@ function onMeasureBorderPointerDown(e: PointerEvent, edge: MeasureResizeEdge) {
   resizeEdge = edge;
   resizeFixedOther = edge === 'left' ? end : start;
   suppressMeasurePreview.value = true;
-  emitCursorAtMeasureEdge(edge);
+  const edgeTime = edge === 'left' ? start : end;
+  const snapped = isTimeOnEventEdge(edgeTime);
+  resizingBorder.value = { edge, snapped };
+  emitCursorAtMeasureEdge(edge, snapped);
   unbindResizeDrag = bindWindowPointerDrag({
     onMove: emitResizedRange,
     onEnd: endMeasureResize,
@@ -1047,6 +1063,9 @@ defineExpose({
       <div
         v-if="measureGeometry.showLeft"
         class="pr-measure-border pr-measure-border--left"
+        :class="{
+          'pr-measure-border--dragging': resizingBorder?.edge === 'left',
+        }"
         data-testid="measure-border-left"
         :style="{ left: `${measureGeometry.left}px` }"
         @pointerdown="onMeasureBorderPointerDown($event, 'left')"
@@ -1057,6 +1076,9 @@ defineExpose({
       <div
         v-if="measureGeometry.showRight"
         class="pr-measure-border pr-measure-border--right"
+        :class="{
+          'pr-measure-border--dragging': resizingBorder?.edge === 'right',
+        }"
         data-testid="measure-border-right"
         :style="{ left: `${measureGeometry.right}px` }"
         @pointerdown="onMeasureBorderPointerDown($event, 'right')"
@@ -1195,6 +1217,11 @@ defineExpose({
 .pr-measure-border:hover::before,
 .pr-measure-border:active::before {
   width: 2px;
+}
+
+/* During resize the playhead (blue/gray) owns the full-height line. */
+.pr-measure-border--dragging::before {
+  display: none;
 }
 
 .pr-measure-border--preview {
