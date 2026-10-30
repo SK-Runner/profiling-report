@@ -180,7 +180,10 @@ function onTabsKeydown(e: KeyboardEvent) {
     >
       <template v-if="activeUnit">
         <!-- Centres the grid; cell size comes from the body's container queries (PR-HEAT-011). -->
-        <div class="pr-heat__lattice" data-testid="heat-lattice">
+        <div
+          class="pr-heat__lattice"
+          data-testid="heat-lattice"
+        >
           <div
             class="pr-heat__grid"
             :style="{ '--pr-heat-cols': HEATMAP_COLUMNS, '--pr-heat-rows': HEATMAP_ROWS }"
