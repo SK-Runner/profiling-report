@@ -2497,6 +2497,7 @@ describe('StatsAside', () => {
     const actions = head.get('.pr-pipe-head__actions');
     expect(actions.findAll('button').map((b) => b.attributes('data-testid'))).toEqual([
       'cannbot-memory',
+      'cannbot-memory-reference',
     ]);
     // The bar's 全屏 is the aside's only fullscreen control (MemoryTopologyPanel PR-MEMTOP-014);
     // it sits inside the panel, after the zoom controls, and only when the aside asks for it.
@@ -2901,7 +2902,7 @@ describe('StatsAside', () => {
     expect(csvOnly.emitted('open-cannbot')).toEqual([['compute'], ['memory']]);
   });
 
-  it('PR-STATS-044d: cannbotSessions drives each scope independently — settled shows 引用/查看, running shows 停止, untouched scopes stay idle', () => {
+  it('PR-STATS-044d: cannbotSessions drives each scope independently — settled shows 引用/查看, running shows 停止+引用, untouched scopes stay idle with 引用常驻', () => {
     const wrapper = mount(StatsAside, {
       props: {
         report: cannbotEntryReport(),
@@ -2915,12 +2916,13 @@ describe('StatsAside', () => {
     // settled: three buttons.
     expect(wrapper.find('[data-testid="cannbot-summary-reference"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="cannbot-summary-view"]').exists()).toBe(true);
-    // running: stop button with the 正在分析 label, no 引用/查看.
+    // running: stop button with the 正在分析 label + 常驻 引用, no 查看.
     const stopBtn = wrapper.get('[data-testid="cannbot-compute"]');
     expect(stopBtn.text()).toContain(t('cannbotAnalyzing'));
-    expect(wrapper.find('[data-testid="cannbot-compute-reference"]').exists()).toBe(false);
-    // no session record: idle single button.
-    expect(wrapper.find('[data-testid="cannbot-memory-reference"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="cannbot-compute-reference"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="cannbot-compute-view"]').exists()).toBe(false);
+    // no session record: idle 分析 button + 常驻 引用.
+    expect(wrapper.find('[data-testid="cannbot-memory-reference"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="cannbot-memory"]').attributes('aria-label')).toBe(t('cannbotAsk'));
   });
 

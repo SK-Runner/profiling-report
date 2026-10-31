@@ -10,9 +10,13 @@ import CannworkReportIcon from '../CannworkReportIcon.vue';
 /**
  * One scope's CANNWork action buttons, driven purely by the host-pushed session
  * state (scope state machine, design doc §7.2):
- * - idle    — no session yet (or host never pushed sessions): single 分析 button.
- * - running — session status `running`: single 正在分析 button, click emits stop.
+ * - idle    — no session yet (or host never pushed sessions): 分析 | 引用.
+ * - running — session status `running`: 正在分析 | 引用, stop click emits stop.
  * - settled — session finished (completed / stopped / error / unknown): 分析 | 引用 | 查看.
+ *
+ * 引用 is always visible (right of the analyse / analysing button): it opens the
+ * add-reference flow in the host; the CANNWork add-reference api is not ready
+ * yet, so the host currently logs a placeholder.
  *
  * `data-testid="cannbot-{scope}"` always lands on the button existing tests click
  * (the idle 分析 button, the running stop button, or the settled 分析 button);
@@ -40,10 +44,7 @@ const isSettled = computed(() => !!session.value && session.value.status !== 'ru
 <template>
   <div
     class="pr-cannbot-actions"
-    :class="{
-      'pr-cannbot-actions--running': isRunning,
-      'pr-cannbot-actions--settled': isSettled,
-    }"
+    :class="{ 'pr-cannbot-actions--running': isRunning }"
   >
     <button
       v-if="isRunning"
@@ -57,40 +58,38 @@ const isSettled = computed(() => !!session.value && session.value.status !== 'ru
       <CannworkStopIcon />
       <span>{{ t('cannbotAnalyzing', locale) }}</span>
     </button>
-    <template v-else>
-      <button
-        type="button"
-        class="pr-cannbot-actions__btn"
-        :data-testid="`cannbot-${scope}`"
-        :aria-label="t('cannbotAsk', locale)"
-        :title="t('cannbotAsk', locale)"
-        @click="emit('open-cannbot', scope)"
-      >
-        <CannworkAnalyseIcon />
-      </button>
-      <template v-if="isSettled">
-        <button
-          type="button"
-          class="pr-cannbot-actions__btn"
-          :data-testid="`cannbot-${scope}-reference`"
-          :aria-label="t('cannbotReference', locale)"
-          :title="t('cannbotReference', locale)"
-          @click="emit('cannbot-reference', scope)"
-        >
-          <CannworkReferenceIcon />
-        </button>
-        <button
-          type="button"
-          class="pr-cannbot-actions__btn"
-          :data-testid="`cannbot-${scope}-view`"
-          :aria-label="t('cannbotView', locale)"
-          :title="t('cannbotView', locale)"
-          @click="emit('cannbot-view', scope)"
-        >
-          <CannworkReportIcon />
-        </button>
-      </template>
-    </template>
+    <button
+      v-else
+      type="button"
+      class="pr-cannbot-actions__btn"
+      :data-testid="`cannbot-${scope}`"
+      :aria-label="t('cannbotAsk', locale)"
+      :title="t('cannbotAsk', locale)"
+      @click="emit('open-cannbot', scope)"
+    >
+      <CannworkAnalyseIcon />
+    </button>
+    <button
+      type="button"
+      class="pr-cannbot-actions__btn"
+      :data-testid="`cannbot-${scope}-reference`"
+      :aria-label="t('cannbotReference', locale)"
+      :title="t('cannbotReference', locale)"
+      @click="emit('cannbot-reference', scope)"
+    >
+      <CannworkReferenceIcon />
+    </button>
+    <button
+      v-if="isSettled"
+      type="button"
+      class="pr-cannbot-actions__btn"
+      :data-testid="`cannbot-${scope}-view`"
+      :aria-label="t('cannbotView', locale)"
+      :title="t('cannbotView', locale)"
+      @click="emit('cannbot-view', scope)"
+    >
+      <CannworkReportIcon />
+    </button>
   </div>
 </template>
 
@@ -120,13 +119,13 @@ const isSettled = computed(() => !!session.value && session.value.status !== 'ru
   opacity: 1;
 }
 
-/* Settled: three icon squares read as one pill — hairline dividers, flat middle. */
-.pr-cannbot-actions--settled .pr-cannbot-actions__btn + .pr-cannbot-actions__btn {
+/* 引用常驻：任意状态都有 ≥2 个按钮，相邻按钮间发丝分隔，整行读作一个 pill。 */
+.pr-cannbot-actions__btn + .pr-cannbot-actions__btn {
   border-left: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 0 0 0 0;
 }
 
-.pr-cannbot-actions--settled .pr-cannbot-actions__btn:last-child {
+.pr-cannbot-actions__btn:last-child {
   border-radius: 0 4px 4px 0;
 }
 

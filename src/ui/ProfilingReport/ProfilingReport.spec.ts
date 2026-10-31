@@ -2418,7 +2418,7 @@ describe('ProfilingReport scaffold', () => {
 
     // sessions prop flows through to the aside's per-scope button state.
     expect(wrapper.find('[data-testid="cannbot-summary-reference"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="cannbot-compute-reference"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="cannbot-compute-reference"]').exists()).toBe(true);
 
     await wrapper.get('[data-testid="cannbot-summary-reference"]').trigger('click');
     expect(wrapper.emitted('cannbot-reference')).toEqual([['summary']]);
